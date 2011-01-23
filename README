@@ -1,5 +1,5 @@
 LCMV beamforming using FieldTrip (ft).
-includes the FieldTrip and SPM8 packs, GNU General Public License version 2 (or later at choice). Further details on "copyleft" can be found at http://www.gnu.org/copyleft/.
+includes the FieldTrip and SPM8 packs, both protected by GNU General Public License version 2 which applies for this repository as well. Further details on "copyleft" can be found at http://www.gnu.org/copyleft/.
 the function to run is covToMont which means from covariance to montecarlo. it creates statistical maps (montecarlo p-value) of differences between conditions or groups. 
 the function requires 4D files such as 'c,rfhp1.0Hz', ft data files of epoched or averaged data (one file per condition), hs_file and config.
 assumes one hs_file per subject (all conditions in one run). the files have to be in numbered directories according to subject number.
