@@ -1,10 +1,11 @@
-function [vol, grid,sMRI] = modelwithspm2test(cfg1, data, headshapefile); 
+function [vol, grid] = modelwithspm(cfg1, data, headshapefile); 
 
 % Creates vol, grid, and sMRI transform for use with sourceanalysis and sourceinterpolate
 % Uses SPM8 for adjusting template MRI to headshape
 
 % cfg1.model = 'singlesphere','singleshell','localspheres' default;
 %cfg1.resolution = in mm, default=10;
+%sMRI not created due to error in ft_read_mri jan 2011
 
 hasspm = (exist('spm_eeg_ft2spm') & exist('spm_eeg_inv_mesh') & exist('spm_eeg_inv_datareg') & exist('spm_eeg_inv_checkdatareg'));
 if ~hasspm
@@ -140,4 +141,4 @@ grid.dim = template_grid.dim;  %YH
 %grid.xgrid = [] %template_grid.xgrid;%YH
 %grid.ygrid = [] %template_grid.ygrid;%YH
 %grid.zgrid = [] %template_grid.zgrid;%YH
-sMRI = read_mri(fullfile(spm('dir'), 'canonical', 'single_subj_T1.nii'));
+%sMRI = read_mri(fullfile(spm('dir'), 'canonical', 'single_subj_T1.nii'));
