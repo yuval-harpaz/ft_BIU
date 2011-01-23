@@ -62,8 +62,9 @@ for sub=1:size(subjects,2)  % size(subs,2)
     if ~exist([num2str(subjects(sub)),'/model.mat'],'file')
     load([num2str(subjects(sub)),'/',conds{1,1}]);
     hdr=ft_read_header([num2str(subjects(sub)),'/c,rfhp0.1Hz,lp']);
-    angcond.grad=hdr.grad;
-    [vol,grid]=YHmodelwithspm2test(cfg,angcond,[num2str(subjects(sub)),'/hs_file']);
+    eval([conds{1,1},'.grad=hdr.grad;'])
+    %eval([conds{1,1},'.hdr=hdr;'])
+    [vol,grid]=modelwithspm(cfg,eval(conds{1,1}),[num2str(subjects(sub)),'/hs_file']);
     save([num2str(subjects(sub)),'/model'],'vol','grid');
     end
 end
@@ -89,7 +90,7 @@ if skipto<=3
             eval(['spre',num2str(con),'  = sourceanalysis(cfg, pre',num2str(con),')']);
             eval(['spst',num2str(con),'  = sourceanalysis(cfg, pst',num2str(con),')']);
             eval(['spst',num2str(con),'.avg.nai=(spst',num2str(con),'.avg.pow./spre',num2str(con),'.avg.pow)-spre',num2str(con),'.avg.pow']);
-            eval(['save ',pat,'/s',num2str(con),condt,' spre',num2str(con),' spst',num2str(con)]);
+            eval(['save ',pat,'/s',num2str(con),'_',condt,' spre',num2str(con),' spst',num2str(con)]);
             eval(['clear spre',num2str(con),' spst',num2str(con),' pre',num2str(con),' pst',num2str(con)])
         end
     end
@@ -102,7 +103,7 @@ for con=1:size(conds,2)
     for sub=1:size(subjects,2)
         group=groups(2,find(groups(1,:)==(subjects(sub))));
         if group>0;
-            load ([num2str(subjects(sub)),'/s',num2str(con),condt]);
+            load ([num2str(subjects(sub)),'/s',num2str(con),'_',condt]);
             eval(['s',num2str(con),'_',num2str(subjects(sub)),'=spst',num2str(con)]);
             eval(['s',num2str(con),'_',num2str(subjects(sub)),'.dim=[15,18,15]'])
             eval(['s',num2str(con),'_',num2str(subjects(sub)),'.pos=pos'])
