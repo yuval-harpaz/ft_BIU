@@ -1,4 +1,5 @@
-cfg.dataset='c1,rfDC';
+function findBadChans(source);
+cfg.dataset=source;
 cfg.trialdef.poststim=10;
 cfg.trialfun='trialfun_beg';
 cfg1=ft_definetrial(cfg);

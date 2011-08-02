@@ -68,7 +68,7 @@ if trlnum>1,
   % check whether data.trial is consistent with trl
   if size(trl,1)~=length(data.trial)
     error('trial definition is not internally consistent')
-  elseif any(trllen~=(trl(:,2)-trl(:,1)+1))
+  elseif any(trllen~=round((trl(:,2)-trl(:,1))+1))
     error('trial definition is not internally consistent')
   end
   
