@@ -271,7 +271,7 @@ fprintf('%d channels marked as GOOD, %d channels marked as BAD\n', sum(chansel),
 % trl is not specified in the function call, but the data is given ->
 % try to locate the trial definition (trl) in the nested configuration
 if isfield(data, 'sampleinfo')
-   trl  = [data.sampleinfo data.offset(:)];
+  trl  = [data.sampleinfo data.offset(:)];  
 else
   % a trial definition is expected in each continuous data set
   trl  = [];
