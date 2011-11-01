@@ -43,16 +43,7 @@ hold all;
 plot(data.time{1,1},chart,'Parent',axes1)
 xlim([begTime endTime]);
 ylim([min(min(chart))-5 max(max(chart))+5]);
-% datacursormode on
-% dcm_obj = datacursormode(figure1);
-% set(dcm_obj,'UpdateFcn',@DCMupdatefcn)
-% pause
-%     function txt = DCMupdatefcn(empt,event_obj)
-%         pos = get(event_obj,'Position');
-%         txt = ['Sample: ',num2str(pos(1))];
-%         display(txt)
-%         %eval(['!echo ',num2str(pos(1)),return' >> clicks.txt']);
-%     end
+
 ntrl  = length(data.trial);
 info.ntrl    = ntrl;
 info.trlop   = 1;
@@ -138,6 +129,21 @@ uicontrol(figure1,'units','pixels','position',[100 5 50 18],'String','bad>',...
         cla
         plot(data.time{1,1},chart,'Parent',axes1);
         title(['TRIAL ',num2str(info.trlop+1)]);
+        datacursormode on
+        dcm_obj = datacursormode(figure1);
+        set(dcm_obj,'UpdateFcn',@DCMupdatefcn)
+        function txt = DCMupdatefcn(empt,event_obj)
+            pos = get(event_obj,'Position');
+            cfg=[];
+            cfg.layout='4D248.lay';
+            %cfg.interactive='yes';
+            cfg.xlim = [0.05 0.05]; %time window in ms
+            %cfg.electrodes = 'labels';
+            cfg.trials=info.trlop;
+            figure;
+            ft_topoplotER(cfg, data);pause;
+            
+        end
     end
 
 
