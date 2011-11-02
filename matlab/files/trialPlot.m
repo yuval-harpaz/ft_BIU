@@ -1,24 +1,20 @@
 function trialPlot(data)
 % view trials and mark good or bad. in the end it writes a badtrials.mat
 % file with 0 for good and 1 for bad trial numbers.
+
 close all
+figure2 = figure;
+title('FIELDTRIP TOPOPLOT')
+display('click on the traces to get a topoplot for selected time points')
 if ~isfield(data,'trial')
     error('requires fieldtrip data with trials');
 end
 begTime=data.time{1,1}(1,1);
 endTime=data.time{1,1}(1,end);
 trial=data.trial{1,1};
-% display('sorting channels')
-% for i=1:4:248
-%     for j=1:248
-%         if strcmp(['A',num2str(i)],data.label{j,1})
-%             trial(i,:)=data.trial{1,trialNum}(j,:);
-%         end
-%     end
-% end
 trial=trial.*10^12;
 % sd=median(std(trial'));
-sd=0.3;
+sd=0.15;
 
 screen_size = get(0, 'ScreenSize');
 firstChan=1;lastChan=248;
@@ -29,7 +25,7 @@ for chan=1:62
 end
 ch=firstChan:28:lastChan;
 for chTick=1:9
-    ticks{1,(10-chTick)}=['A',num2str(ch(chTick))];
+    ticks{1,(10-chTick)}='';
 end
 
 figure1 = figure('XVisual',...
@@ -40,7 +36,7 @@ axes1 = axes('Parent',figure1,...
     'YTick',[-171 -150 -129 -108 -87 -66 -45 -24 -3]);
 box('on');
 hold all;
-plot(data.time{1,1},chart,'Parent',axes1)
+%plot(data.time{1,1},chart,'Parent',axes1)
 xlim([begTime endTime]);
 ylim([min(min(chart))-5 max(max(chart))+5]);
 
@@ -55,6 +51,7 @@ uicontrol(figure1,'units','pixels','position',[50 5 50 18],'String','good>',...
 uicontrol(figure1,'units','pixels','position',[100 5 50 18],'String','bad>',...
     'Callback',@markbad_next);
 
+newfig(info.trlop)
     function bt = markgood_next(varargin)
         %        markgood(varargin{:});
         %         next(varargin{:});
@@ -67,8 +64,9 @@ uicontrol(figure1,'units','pixels','position',[100 5 50 18],'String','bad>',...
             close all
             return;
         end
-        newfig(info.trlop+1);
         next(varargin{:})
+        newfig(info.trlop);
+        
         function varargout = next(figure1, eventdata, handles, varargin)
             info = guidata(figure1);
             if info.trlop < info.ntrl,
@@ -80,8 +78,6 @@ uicontrol(figure1,'units','pixels','position',[100 5 50 18],'String','bad>',...
     end
 
     function bt = markbad_next(varargin)
-        %        markgood(varargin{:});
-        %         next(varargin{:});
         display(['trial ',num2str(info.trlop),' bad']);
         badtrials(info.trlop)=1;
         if info.trlop==length(data.trial)
@@ -93,9 +89,9 @@ uicontrol(figure1,'units','pixels','position',[100 5 50 18],'String','bad>',...
             return;
             
         end
-        newfig(info.trlop+1);
-        
         next(varargin{:})
+        newfig(info.trlop);
+        
         function varargout = next(figure1, eventdata, handles, varargin)
             info = guidata(figure1);
             if info.trlop < info.ntrl,
@@ -106,15 +102,8 @@ uicontrol(figure1,'units','pixels','position',[100 5 50 18],'String','bad>',...
         end
     end
     function newfig(trnum)
+        datacursormode on
         trial=data.trial{1,trnum};
-        %display('sorting channels')
-%         for i=1:4:248
-%             for j=1:248
-%                 if strcmp(['A',num2str(i)],data.label{j,1})
-%                     trial(i,:)=data.trial{1,trnum}(j,:);
-%                 end
-%             end
-%         end
         trial=trial.*10^12;
         firstChan=1;lastChan=248;
         chans=firstChan:4:lastChan;
@@ -122,26 +111,23 @@ uicontrol(figure1,'units','pixels','position',[100 5 50 18],'String','bad>',...
         for Chan=1:62
             chart(Chan,:)=trial(chans(Chan),:)-Chan*sd*10;
         end
-        %figure1=clf(figure1);
-        %         axes('Parent',figure1,...
-        %     'YTickLabel',ticks,...
-        %     'YTick',[-171 -150 -129 -108 -87 -66 -45 -24 -3]);
         cla
-        plot(data.time{1,1},chart,'Parent',axes1);
-        title(['TRIAL ',num2str(info.trlop+1)]);
-        datacursormode on
+        plot(data.time{1,1},chart,'Parent',axes1,'color','k');
+        title(['TRIAL ',num2str(info.trlop)]);
         dcm_obj = datacursormode(figure1);
         set(dcm_obj,'UpdateFcn',@DCMupdatefcn)
         function txt = DCMupdatefcn(empt,event_obj)
+            
             pos = get(event_obj,'Position');
+            %set(dcm_obj,'Enable','off');
+            %datacursormode off
             cfg=[];
             cfg.layout='4D248.lay';
-            %cfg.interactive='yes';
-            cfg.xlim = [0.05 0.05]; %time window in ms
-            %cfg.electrodes = 'labels';
+            cfg.xlim = [pos(1) pos(1)]; %time window in ms
             cfg.trials=info.trlop;
-            figure;
-            ft_topoplotER(cfg, data);pause;
+            figure(figure2);
+            ft_topoplotER(cfg, data);
+            display(['plot of trial ',num2str(info.trlop)]);
             
         end
     end
