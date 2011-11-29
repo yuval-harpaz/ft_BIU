@@ -47,6 +47,7 @@ for i=1:4;
     plot(data.time{1,1},chart,'Parent',axes1)
     title(['Channels A',num2str(firstChan),' to A',num2str(lastChan)]);
     firstChan=firstChan-62;
+    ylim([-190 0]);
 end
 
 % cfg1.hpfreq=55;
