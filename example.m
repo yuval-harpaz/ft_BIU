@@ -1,5 +1,5 @@
 cfg= [];
-cfg.dataset='c,rfhp0.1Hz'; % change file name or path+name
+cfg.dataset='xc,hb,lf_c,rfhp0.1Hz'; % change file name or path+name
 cfg.trialdef.eventtype='TRIGGER';
 cfg.trialdef.eventvalue=[100,102,104,106]; % all conditions.
 cfg.trialdef.prestim=0.3;
@@ -11,19 +11,27 @@ cfg.trialdef.offset=-0.3;
 cfg.trialdef.powerline='yes'; % takes into account triggers that contain the electricity in the wall (+256).
 cfg.trialfun='BIUtrialfun';
 cfg1=ft_definetrial(cfg);
-
 cfg1.blc='yes';
 cfg1.continuous='yes';
+cfg1.channel={'MEG','-A204','-A74'};
+cfg1.blc='yes';
+
+%% looking for high frequency noise (muscle)
+
+cfg2=cfg1;
+cfg2.hpfilter='yes';cfg2.hpfreq=60;
+datahf=ft_preprocessing(cfg1);
+cfg3=[];
+cfg3.method='summary'; %trial
+cfg3.channel='MEG';
+cfg3.alim=1e-12;
+datahfrv=ft_rejectvisual(cfg3, datahf);
+cfg1.trl=reindex(datahf.cfg.trl,datahfrv.cfg.trl);
+%% reading the data
 cfg1.blcwindow=[-0.2,0];
 cfg1.bpfilter='yes';
 cfg1.bpfreq=[1 40];
-str='';
-for i=[1:73 75:203 205:248]
-    str=[str,' ''','A',num2str(i),'''']
-end
-eval(['chans={',str,'};']);
-    
-cfg1.channel = chans;
+
 dataorig=ft_preprocessing(cfg1); % reading the data
 
 %% PCA
