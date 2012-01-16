@@ -14,7 +14,6 @@ cfg1=ft_definetrial(cfg);
 cfg1.blc='yes';
 cfg1.continuous='yes';
 cfg1.channel={'MEG','-A204','-A74'};
-cfg1.blc='yes';
 
 %% looking for high frequency noise (muscle)
 
