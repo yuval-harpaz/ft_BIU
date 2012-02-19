@@ -26,6 +26,10 @@ if ~isfield(data,'hdr')
     data.hdr.grad=data.grad;
 end;
 %convert to spm format
+if isfield(data.grad,'chanpos')
+    data.grad.pnt=data.grad.chanpos;
+    data.grad.ori=data.grad.chanori;
+end
 D=spm_eeg_ft2spm(data,'modtempfile');
 S.D = D;
 S.task = 'headshape';
@@ -96,11 +100,11 @@ switch cfg1.model
             cfg.feedback               = 'yes';
             cfg.grad                   = D.inv{1}.datareg(1).sensors;
             mesh.tess_scalp=export(gifti(tmesh.tess_scalp),'spm');
-            cfg.headshape              = mesh.tess_scalp.vert;
-            cfg.radius                 = 85;
-            cfg.maxradius              = 200;
+            cfg.headshape.pnt              = mesh.tess_scalp.vert;
+            cfg.radius                 = 8.5;
+            cfg.maxradius              = 20;
             cfg.channel={'MEG'};
-            vol  = prepare_localspheres(cfg);
+            vol  = ft_prepare_localspheres(cfg);
             vol.o=spm_eeg_inv_transform_points(D.inv{1}.datareg.toMNI, vol.o);
 	        cfg.headshape              = tscalp.vert;
             tvol  = prepare_localspheres(cfg);

@@ -317,6 +317,9 @@ else
         end
     end
     if isfield(meegstruct.sensors, 'meg')
+        if ~isfield(meegstruct.sensors.meg,'pnt')
+            meegstruct.sensors.meg.pnt=meegstruct.sensors.meg.chanpos;
+        end
         if isempty(meegstruct.sensors.meg) || isempty(meegstruct.sensors.meg.pnt)
             meegstruct.sensors = rmfield(meegstruct.sensors, 'meg');
         end
