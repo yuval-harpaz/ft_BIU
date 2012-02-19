@@ -30,7 +30,11 @@ for i=1:4;
     chans=firstChan:lastChan;
     chart=zeros(62,size(data.trial{1,1},2));
     for chan=1:62
-        chart(chan,:)=trial(chans(chan),:)-chan*sd*10;
+        ch=trial(chans(chan),:);
+        ch=ch-mean(ch); % BL correction
+        ch(ch>2)=2;
+        ch(ch<-2)=-2;
+        chart(chan,:)=ch-chan*sd*10;
     end
     ch=firstChan:7:lastChan;
     for chTick=1:9
@@ -47,6 +51,7 @@ for i=1:4;
     plot(data.time{1,1},chart,'Parent',axes1)
     title(['Channels A',num2str(firstChan),' to A',num2str(lastChan)]);
     firstChan=firstChan-62;
+    ylim([-190 0]);
 end
 
 % cfg1.hpfreq=55;
