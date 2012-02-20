@@ -34,6 +34,8 @@ function [M1] = spm_eeg_inv_icp(data1,data2,fid1,fid2,Fmri,Fhsp,aff)
 % $Id: spm_eeg_inv_icp.m 2345 2008-10-16 11:31:35Z guillaume $
 
 % use figure and fiducials if specified
+
+nRot=5; % used to be 64, changed by yuval to prevent too much rotation, feb 2012
 %--------------------------------------------------------------------------
 try, fid1; catch, fid1 = []; end
 try, fid2; catch, fid2 = []; end
@@ -44,7 +46,7 @@ try, aff;  catch, aff  = 0;  end
 %--------------------------------------------------------------------------
 M1    = speye(4,4);
 tri   = delaunayn(data1');
-for k = 1:64
+for k = 1:nRot
 
     % find nearest neighbours
     %----------------------------------------------------------------------
