@@ -49,6 +49,7 @@ end
 % end
 % hybrid=dataC;
 % hybrid(1:274,:)=dataC(1:274,:)+dataicaC;
+%dataC=int16(dataC);
 write_data_block(pdf2, dataC, 1);
 cd(PWD);
 end
