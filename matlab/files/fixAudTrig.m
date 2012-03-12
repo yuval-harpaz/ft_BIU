@@ -1,4 +1,4 @@
-function [newtrig,events]=fixAudTrig(trig,Aud,alltrigs,thr)
+function [newtrig,events]=fixAudTrig(trig,Aud,alltrigs,thr,sampForw)
 % replacing auditory signal X3) with onsets or offsets
 % changes values according to previous triger (sent by eprime)
 % requires:
@@ -12,6 +12,9 @@ function [newtrig,events]=fixAudTrig(trig,Aud,alltrigs,thr)
 %
 % thr: threshold for auditory signal detection. 0.05 is the default.
 %
+% sampForw: how many samples after the trigger to look for the auditory
+% signal
+%
 % event list is created with columns for trigger onset, trigger value and
 % trigger offset.
 % 
@@ -24,6 +27,13 @@ end
 if isempty(thr)
     thr=0.05;
 end
+if ~exist('sampForw','var')
+    sampForw=[];
+end
+if isempty(sampForw)
+    sampForw=300;
+end
+
 warning('50Hz cleaning with cleanMEG pack will not be possible using the new trigger'); %#ok<WNTAG>
 trig16=uint16(trig);
 trigf=bitset(trig16,9,0); %getting rid of trigger 256 (9)
@@ -42,7 +52,7 @@ newtrig=zeros(size(trigf));
 events=[];
 for i=1:size(trigonsets,2)
     ionset=trigonsets(1,i);
-    [~,v]=find(abs(Aud(ionset:(ionset+300)))>thr,1);
+    [~,v]=find(abs(Aud(ionset:(ionset+sampForw)))>thr,1);
     tvalue=trigf(ionset);
     %if tvalue>0;
     %         ioffset=find(offsets>ionset,1);
