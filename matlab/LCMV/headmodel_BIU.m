@@ -168,8 +168,22 @@ end
 
 
 %% preparing a grid of dipoles
-% load template grid
-eval (['load ~/ft_BIU/matlab/LCMV/template_grid_',num2str(res),'mm.mat'])
+% load template grid works only for scalp.
+% eval (['load ~/ft_BIU/matlab/LCMV/template_grid_',num2str(res),'mm.mat'])
+
+template_grad     = [];
+template_grad.pnt = [];
+template_grad.ori = [];
+template_grad.tra = [];
+template_grad.label = {};
+cfg = [];
+cfg.grid.xgrid = -70:cfg1.resolution:70;
+cfg.grid.ygrid = -105:cfg1.resolution:75;
+cfg.grid.zgrid = -60:cfg1.resolution:80;
+% cfg.grid.tight = 'yes'; %new way
+cfg.inwardshift = -1.5;
+template_grid = prepare_dipole_grid(cfg, tvol, template_grad);
+
 % changing position of grid point from MNI to individual positions.
 grid         = [];
 grid.pos     = spm_eeg_inv_transform_points(inv(M1), template_grid.pos);
