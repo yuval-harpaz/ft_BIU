@@ -1,5 +1,8 @@
-LCMV beamforming using FieldTrip (ft).
+
+beamforming using FieldTrip (ft).
 see also at http://yuval-harpaz.github.com/ft_BIU/
+
+if you have your own fieldtrip version use fixFT4BIU to adjust it for bar ilan university data.
 
 includes the FieldTrip and SPM8 packs, both protected by GNU General Public License version 2 which applies for this repository as well. Further details on "copyleft" can be found at http://www.gnu.org/copyleft/.
 the function to run is covToMont which means from covariance to montecarlo. it creates statistical maps (montecarlo p-value) of differences between conditions or groups. 
