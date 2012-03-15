@@ -17,7 +17,7 @@ if ~exist('./ftFixed4BIU','file')
     end
     if exist('external/spm8','dir')
         movefile('external/spm8','~/Dektop/')
-        display('I put external/spm8 on ~/Desktop')
+        display('I put external/spm8 on ~/Desktop/outOfFT/')
     end
     display('for beamformer_sam.m replace progress with ft_progress a few times')
     copyfile('~/ft_BIU/matlab/files/ftFixed4BIU','ftFixed4BIU')

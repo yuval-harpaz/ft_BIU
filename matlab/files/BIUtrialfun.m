@@ -10,9 +10,9 @@ function [trl, event] = BIUtrialfun(cfg);
 % cfg.trialdef.rspwin : in ms (default = 1)  : time window for response (from beginnig of trial)
 
 fprintf('reading header...\n');
-hdr = read_header(cfg.dataset);
+hdr = ft_read_header(cfg.dataset);
 fprintf('reading events from file...\n');
-event= read_event(cfg.dataset);
+event= ft_read_event(cfg.dataset);
 nev=[];
 trl = [];
 
