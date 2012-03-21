@@ -1,10 +1,16 @@
 function dataBL=correctBL(data,blcwindow)
 % dataBL=correctBL(dataica,[-0.2 0]);
 dataBL=data;
+
 if ~isfield(dataBL,'avg')
-    firstSamp=nearest(dataBL.time{1,1},blcwindow(1));
-    lastSamp=nearest(dataBL.time{1,1},blcwindow(2));
     trialLength=size(dataBL.trial{1,1},2);
+    if ~exist('blcwindow','var')
+        firstSamp=1;
+        lastSamp=trialLength;
+    else
+        firstSamp=nearest(dataBL.time{1,1},blcwindow(1));
+        lastSamp=nearest(dataBL.time{1,1},blcwindow(2));
+    end
     for trial=1:size(dataBL.trial,2)
         m=mean(dataBL.trial{1,trial}(:,firstSamp:lastSamp),2);
         for i=1:size(m,1); m(i,2:trialLength)=m(i,1);end
