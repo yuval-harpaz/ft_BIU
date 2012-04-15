@@ -23,8 +23,8 @@
 22	Olfactory_R
 23	Frontal_Sup_Medial_L
 24	Frontal_Sup_Medial_R
-25	Frontal_Mid_Orb_L
-26	Frontal_Mid_Orb_R
+25	Frontal_Med_Orb_L
+26	Frontal_Med_Orb_R
 27	Rectus_L
 28	Rectus_R
 29	Insula_L
