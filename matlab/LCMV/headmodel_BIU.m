@@ -124,7 +124,8 @@ D.inv{1}.datareg(1).toMNI = D.inv{1}.mesh.Affine*M1;
 D.inv{1}.datareg(1).fromMNI = inv(D.inv{1}.datareg(1).toMNI);
 D.inv{1}.datareg(1).modality = 'MEG';
 
-[Lsens, Llabel]   = spm_eeg_layout3D(D.sensors('MEG'), 'MEG');
+%[Lsens, Llabel]   = spm_eeg_layout3D(D.sensors('MEG'), 'MEG'); %buggy and
+%not useful
 mesh=spm_eeg_inv_checkdatareg_BIU(D);
 %Build vol
 eval(['tinpoints = export(gifti(tmesh.tess_',volType,'), ','''spm''',');'])
@@ -157,7 +158,9 @@ switch model
         vol  = ft_prepare_localspheres_mm(cfg);
         cfg.singlesphere='yes';
         single=ft_prepare_localspheres_mm(cfg);
-        
+        tvol=[];
+        tvol.bnd = export(gifti(tinpoints), 'ft');
+        tvol.type = 'nolte'; % it is just for the grid, never mind the type.
         
 
 %         vol.o=spm_eeg_inv_transform_points(D.inv{1}.datareg.toMNI, vol.o);
