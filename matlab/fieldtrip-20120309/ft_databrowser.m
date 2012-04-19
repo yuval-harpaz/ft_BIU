@@ -1140,7 +1140,11 @@ chanindx  = match_str(opt.hdr.label, cfg.channel);
 if ~isempty(opt.event)
   % select only the events in the current time window
   event     = opt.event;
-  evtsample = [event(:).sample];
+  if iscell(event)
+      evtsample = [event{:}.sample];
+  else
+    evtsample = [event(:).sample];
+  end
   event     = event(evtsample>=begsample & evtsample<=endsample);
 else
   event = [];
