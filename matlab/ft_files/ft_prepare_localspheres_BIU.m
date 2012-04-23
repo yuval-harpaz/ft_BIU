@@ -133,8 +133,8 @@ end
 
 % fit a single sphere to all headshape points
 [single_o, single_r] = fitsphere(headshape.pnt);
-fprintf('single sphere,   %5d surface points, center = [%4.1f %4.1f %4.1f], radius = %4.1f\n', Nshape, single_o(1), single_o(2), single_o(3), single_r);
-
+% fprintf('single sphere,   %5d surface points, center = [%4.1f %4.1f %4.1f], radius = %4.1f\n', Nshape, single_o(1), single_o(2), single_o(3), single_r);
+ display(['single sphere, center = ',num2str(single_o),', readius = ',num2str(single_r)]);
 vol = [];
 
 if strcmp(cfg.singlesphere, 'yes')
