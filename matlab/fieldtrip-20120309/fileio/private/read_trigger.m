@@ -102,6 +102,7 @@ end
 if fixBIU
   dat = dat - bitand(dat, 256);
   dat = dat - bitand(dat, 512);
+  dat = dat - bitand(dat, 1024);
 end
 
 if fix4dglasgow
