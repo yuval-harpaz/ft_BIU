@@ -29,7 +29,7 @@ if ischar(cfg.neighbours)
         end
     elseif strcmp(cfg.neighbours,'LR')
         doLR=true;
-        load /home/yuval/ft_BIU/matlab/files/LRpairs;
+        load ~/ft_BIU/matlab/files/LRpairs;
         cfg.neighbours=struct;
         cfg.neighbours(1,1).label='A6';
         cfg.neighbours(1,1).neighblabel(1:114,1)=LRpairs(2:115,1);
