@@ -161,7 +161,11 @@ for ifreqoi = 1:nfreqoi
       
     otherwise
       % create a single taper according to the window specification as a replacement for the DPSS (Slepian) sequence
-      tap = window(taper, timwinsample(ifreqoi),tapopt)';
+      if isempty(tapopt)
+          tap = window(taper, timwinsample(ifreqoi))';
+      else
+        tap = window(taper, timwinsample(ifreqoi),tapopt)';
+      end
       tap = tap ./ norm(tap,'fro'); % make it explicit that the frobenius norm is being used
   end
   
