@@ -23,9 +23,16 @@ if ischar(cfg.neighbours)
             error('mean method should not be used with cfg.neighbours=all')
         end
         cfg.neighbours=struct;
+        if ~ismember('A1',origData.label)
+            error('FIXME, doesnt work if A1 is missing')
+        end
         cfg.neighbours(1,1).label='A1';
+        li=0;
         for labeli=1:247;
-            cfg.neighbours(1,1).neighblabel{labeli,1}=['A',num2str(labeli+1)];
+            if ismember(['A',num2str(labeli+1)],origData.label)
+                li=li+1;
+                cfg.neighbours(1,1).neighblabel{li,1}=['A',num2str(labeli+1)];
+            end
         end
     elseif strcmp(cfg.neighbours,'LR')
         doLR=true;
