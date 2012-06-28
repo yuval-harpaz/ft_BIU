@@ -1,24 +1,25 @@
- % remains true until there is a column with number
+function peaks=peaksInTrials(data,wlt);
+% requires the output of freqanalysis_triang_temp
 
 
-peaks.trial={};
+peaks.label=data.label;
 peaks.wlt=wlt;
 th=1;
-
-for chani=1:length(TF.label)
-    for triali=1:size(TF.powspctrm,1)
+t=data.time;
+for chani=1:length(data.label)
+    for triali=1:size(data.powspctrm,1)
         firstSamp=true;
         lastSamp=false;
         ispeak=false;
         %pkCount=0;
-        peaks.trial{1,triali}.time=[];
-        peaks.trial{1,triali}.SNR=[];
-        peaks.trial{1,triali}.wlti=[];
+        peaks.chan{1,chani}.trial{1,triali}.time=[];
+        peaks.chan{1,chani}.trial{1,triali}.SNR=[];
+        peaks.chan{1,chani}.trial{1,triali}.wlti=[];
         for sampi=1:length(t)
             gtn=[];gtp=[];
-            yNow=squeeze(TF.powspctrm(triali,chani,:,sampi));
+            yNow=squeeze(data.powspctrm(triali,chani,:,sampi));
             if ~(sampi==length(t))
-                yNext=squeeze(TF.powspctrm(triali,chani,:,sampi+1));
+                yNext=squeeze(data.powspctrm(triali,chani,:,sampi+1));
             else
                 lastSamp=true;
             end
@@ -33,7 +34,7 @@ for chani=1:length(TF.label)
                         gtn=sum(abs(maxv)<abs(yNext))==0; % 1 if greater than next
                     end
                     if ~firstSamp
-                        yPrev=squeeze(TF.powspctrm(triali,chani,:,sampi-1));
+                        yPrev=squeeze(data.powspctrm(triali,chani,:,sampi-1));
                         gtp=sum(abs(maxv)<abs(yPrev))==0; % 1 if greater than prev
                     else
                         firstSamp=false;
@@ -59,14 +60,14 @@ for chani=1:length(TF.label)
                     end
                     if ispeak
                         %pkCount=pkCount+1;
-                        peaks.trial{1,triali}.time=[peaks.trial{1,triali}.time,t(sampi)];
-                        peaks.trial{1,triali}.SNR=[peaks.trial{1,triali}.SNR,maxv];
-                        peaks.trial{1,triali}.wlti=[peaks.trial{1,triali}.wlti,maxi]; %wavelet index
+                        peaks.chan{1,chani}.trial{1,triali}.time=[peaks.chan{1,chani}.trial{1,triali}.time,t(sampi)];
+                        peaks.chan{1,chani}.trial{1,triali}.SNR=[peaks.chan{1,chani}.trial{1,triali}.SNR,maxv];
+                        peaks.chan{1,chani}.trial{1,triali}.wlti=[peaks.chan{1,chani}.trial{1,triali}.wlti,maxi]; %wavelet index
                     end
                 end
             end
         end
-        if isempty(peaks.trial{1,triali}.time)
+        if isempty(peaks.chan{1,chani}.trial{1,triali}.time)
             display(['nothoing for trial ',num2str(triali)]);
         else
             display(['trial ',num2str(triali)]);
