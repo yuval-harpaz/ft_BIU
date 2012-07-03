@@ -7,6 +7,7 @@ peaks.wlt=wlt;
 th=1;
 t=data.time;
 for chani=1:length(data.label)
+    display(['channel index ',num2str(chani),' of ',num2str(length(data.label)),' ',data.label{chani}]);
     for triali=1:size(data.powspctrm,1)
         firstSamp=true;
         lastSamp=false;
@@ -69,8 +70,6 @@ for chani=1:length(data.label)
         end
         if isempty(peaks.chan{1,chani}.trial{1,triali}.time)
             display(['nothoing for trial ',num2str(triali)]);
-        else
-            display(['trial ',num2str(triali)]);
         end
     end
 end
