@@ -1,4 +1,13 @@
-function pksByTrial=peakSorter(chan,peaks,timewindows,trialinfo,posNeg,method) %#ok<STOUT>
+function pksByTrial=peakSorter(chan,peaks,timewindows,trialinfo,posNeg,method,noWlts) %#ok<STOUT>
+try
+    if strcmp('noWlts',noWlts)
+        doWlts=false;
+    else
+        doWlts=true;
+    end
+catch
+    doWlts=true;
+end
 [~,chani]=ismember(chan,peaks.label);
 conds=unique(trialinfo);
 for condi=1:length(conds)
@@ -20,19 +29,34 @@ for condi=1:length(conds)
             if length(pkLH)==1
                 pkt=peaks.chan{1,chani}.trial{1,triali}.time(pki(pkLH));
                 pkSNR=peaks.chan{1,chani}.trial{1,triali}.SNR(pki(pkLH));
+                if doWlts
+                    pkw=peaks.chan{1,chani}.trial{1,triali}.wlti(pki(pkLH));
+                else
+                    pkw=1;
+                end
                 pkTrCount=pkTrCount+1;
-                pkinfo.timewin{1,timewini}(pkTrCount,1:3)=[triali,pkt,pkSNR];
+                pkinfo.timewin{1,timewini}(pkTrCount,1:4)=[triali,pkt,pkSNR,pkw];
             elseif length(pkLH)>1
                 if strcmp(method,'biggest')
                     [pkSNR,pi]=max(abs(peaks.chan{1,chani}.trial{1,triali}.SNR(pki(pkLH))));
                     pkt=peaks.chan{1,chani}.trial{1,triali}.time(pki(pkLH(pi)));
+                    if doWlts
+                        pkw=peaks.chan{1,chani}.trial{1,triali}.wlti(pki(pkLH(pi)));
+                    else
+                        pkw=1;
+                    end
                     pkTrCount=pkTrCount+1;
-                    pkinfo.timewin{1,timewini}(pkTrCount,1:3)=[triali,pkt,pkSNR];
+                    pkinfo.timewin{1,timewini}(pkTrCount,1:4)=[triali,pkt,pkSNR,pkw];
                 elseif strcmp(method,'earliest')
                     pkt=peaks.chan{1,chani}.trial{1,triali}.time(pki(pkLH(1)));
                     pkSNR=peaks.chan{1,chani}.trial{1,triali}.SNR(pki(pkLH(1)));
+                    if doWlts
+                    pkw=peaks.chan{1,chani}.trial{1,triali}.wlti(pki(pkLH(1)));
+                    else
+                        pkw=1;
+                    end
                     pkTrCount=pkTrCount+1;
-                    pkinfo.timewin{1,timewini}(pkTrCount,1:3)=[triali,pkt,pkSNR];
+                    pkinfo.timewin{1,timewini}(pkTrCount,1:4)=[triali,pkt,pkSNR,pkw];
                 else
                     error('choose method for choosing peak, biggest or earliest')
                 end
