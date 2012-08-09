@@ -1,4 +1,4 @@
-function [data,header]=readCNT(cfg)
+function [data,header,events]=readCNT(cfg)
 % you can run just readCNT if there is one cnt file in the path
 % give it cfg.dataset to specify fileName
 % other cfg fields can be added for preprocessing (trl, filter etc)
@@ -26,4 +26,9 @@ if ~isfield(cfg,'trl')
     cfg.trl=[1,header.nsample,0];
 end
 data=ft_preprocessing(cfg);
+try
+    events=readTrg;
+catch %#ok<CTCH>
+    events=[];
+end
 end
