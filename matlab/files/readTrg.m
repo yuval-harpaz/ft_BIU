@@ -1,7 +1,9 @@
-function events=readTrg
-LS=ls('*.cnt');
-dotN=findstr('.',LS);
-FNnoSuf=LS(1:dotN-1);
+function events=readTrg(eegFileName)
+if ~exist('eegFileName','var')
+    eegFileName=ls('*.cnt');
+end
+dotN=findstr('.',eegFileName);
+FNnoSuf=eegFileName(1:dotN-1);
 fid = fopen([FNnoSuf,'.trg']);
 tline = fgets(fid);
 counter=0;

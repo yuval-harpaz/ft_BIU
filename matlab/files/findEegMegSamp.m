@@ -1,12 +1,15 @@
 function samples=findEegMegSamp(megTrigOnset,eegEvent)
-dif_evt=diff(eegEvent);
-dif_onset=diff(megTrigOnset);
+% here we look for 3 clicks with even spacing on eeg and meg
+
+dif_eeg_onset=diff(eegEvent);
+dif_meg_onset=diff(megTrigOnset);
 counter=1;
-for difi=1:length(dif_onset)
+% check if 3 conseq triggers are equally spaced for eeg and meg
+for difi=1:(length(dif_meg_onset)-1)
     done=false;
-    if dif_onset(difi)<2034
-        for difj=1:length(dif_evt)
-            if abs(dif_onset(difi)-dif_evt(difj))<3 && abs(dif_onset(difi)-dif_evt(difj))<3 && ~done
+    if dif_meg_onset(difi)<2034
+        for difj=1:(length(dif_eeg_onset)-1)
+            if abs(dif_meg_onset(difi)-dif_eeg_onset(difj))<2 && abs(dif_meg_onset(difi+1)-dif_eeg_onset(difj+1))<2 && ~done
                 samples(counter,2)=megTrigOnset(difi);
                 samples(counter,4)=eegEvent(difj);
                 samples(counter,1)=difi; % meg trig index
