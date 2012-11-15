@@ -181,10 +181,15 @@ end
 %%% Main loop over trials, inside fourierspectra are obtained and transformed into the appropriate outputs
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % this is done on trial basis to save memory
-
+if ~isfield(cfg,'feedback')
+    cfg.feedback='yes';
+end
 ft_progress('init', cfg.feedback, 'processing trials');
 for itrial = 1:ntrials
+    if strcmp(cfg.feedback,'yes')
     display(['TRIAL ',num2str(itrial),' of ',num2str(ntrials)])
+    end
+    
     %disp(['processing trial ' num2str(itrial) ': ' num2str(size(data.trial{itrial},2)) ' samples']);
     fbopt.i = itrial;
     fbopt.n = ntrials;

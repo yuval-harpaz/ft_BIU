@@ -31,7 +31,7 @@ data = read_data_block(pdf, lat, chi);
 %     dataC(chi(i),:)=data(i,:);
 % end
 dataC(chi,:)=data; % same but faster
-
+clear data
 %% example:
 % chi(2)=10;
 % chn(2)='A2';
@@ -44,7 +44,7 @@ for li=1:size(newData,1)
     dataC(chi(find(strcmp(labels(li),chn))),:)=newData(li,:); %#ok<FNDSB>
     %dataC(chi(i),1:size(newData,2))=data(find(strcmp((chn(i)),labels)),:);
 end
-
+clear newData
 write_data_block(pdf2, dataC, 1);
 cd(PWD);
 end
