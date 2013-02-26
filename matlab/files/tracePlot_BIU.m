@@ -14,7 +14,7 @@ cfg.trialdef.end=endTime;
 cfg.trialfun='trialfun_raw';
 cfg1=ft_definetrial(cfg);
 str='{';for i=1:248;str=[str,' ','''A',num2str(i),''''];end;str=[str,'}'];
-eval(['chans=',str]);
+eval(['chans=',str,';']);
 cfg1.channel='MEG';
 cfg1.hpfilter='yes';
 cfg1.hpfreq=3;
