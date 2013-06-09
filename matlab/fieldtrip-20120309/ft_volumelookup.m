@@ -90,7 +90,7 @@ ft_preamble loadvar volume
 % the handling of the default cfg options is done further down
 % the checking of the input data is done further down
 
-cfg.maskparameter = ft_getopt(cfg,'maskparameter'));
+cfg.maskparameter = ft_getopt(cfg,'maskparameter');
 cfg.roi           = ft_getopt(cfg,'roi');
 cfg.inputcoord    = ft_getopt(cfg,'inputcoord');
 cfg.atlas         = ft_getopt(cfg,'atlas');

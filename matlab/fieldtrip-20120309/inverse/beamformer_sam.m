@@ -118,6 +118,17 @@ ft_progress('init', feedback, 'scanning grid');
 % the angles are the same for all dipole locations
 all_angles = 0:pi/72:pi;
 
+keepmomn=find(ismember(varargin(1,1:2:end),'keepmom'));
+if isempty(keepmomn)
+    keepmom=true;
+elseif strcmp(varargin(keepmomn*2),'no')
+    keepmom=false;
+else
+    keepmom=true;
+end
+    
+    
+
 for diplop=1:size(dip.pos,1)
 
   vox_pos = dip.pos(diplop,:);
@@ -229,7 +240,11 @@ for diplop=1:size(dip.pos,1)
   dipout.ori{diplop}    = opt_vox_or;
   dipout.filter{diplop} = SAMweights;
   if ~isempty(dat)
-    dipout.mom{diplop} = SAMweights * dat;
+     if keepmom
+        dipout.mom{diplop} = SAMweights * dat;
+     else
+        dipout.mom{diplop} =[];
+     end
   end
 
 ft_progress(diplop/size(dip.pos,1), 'scanning grid %d/%d\n', diplop, size(dip.pos,1));
