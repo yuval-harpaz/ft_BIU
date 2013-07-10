@@ -21,8 +21,12 @@ if ~exist('./ftFixed4BIU','file')
     end
     display('for beamformer_sam.m replace progress with ft_progress a few times')
     copyfile('~/ft_BIU/matlab/files/ftFixed4BIU','ftFixed4BIU')
+    if ~exist('./fileio/private/read_4D_hdr_old.m','file')
+        movefile('fileio/private/read_4D_hdr.m','fileio/private/read_4D_hdr_old.m')
+        copyfile('~/ft_BIU/matlab/ft_files/read_ft_hdr_BIU1.m','fileio/private/read_4D_hdr.m')
+    end
 else
-    display('it seems thif ft package was fixed already')
+    display('it seems that this ft package was fixed already')
 end
     
 
