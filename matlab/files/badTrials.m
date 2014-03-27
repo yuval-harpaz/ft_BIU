@@ -15,7 +15,16 @@ function [good,bad,trials]=badTrials(cfg,data,plt)
 % cfg.criterion='fixed';
 % cfg.critval=1e-25;
 % [good,bad]=badTrials(cfg,data,1)
-
+if nargin==1
+    data=cfg;
+    cfg=[];
+    plt=1;
+end
+if isempty(cfg)
+    cfg.method='abs';
+    cfg.criterion='sd';
+    cfg.critval=3;
+end
 % 
 switch cfg.method
     case 'abs'

@@ -9,7 +9,7 @@ function [trl, event] = trialfun_raw(cfg);
 % cfg.trialdef.end : end time (s, default end of run).
 
 fprintf('reading header...\n');
-hdr = read_header(cfg.dataset);
+hdr = ft_read_header(cfg.dataset);
 %fprintf('reading events from file...\n');
 % event= read_event(cfg.dataset);
 event{1,1}.type='TRIGGER';

@@ -8,7 +8,9 @@ if ~exist('source','var')
     source=[];
 end
 if isempty(source)
-    source='c,rfhp0.1Hz';
+    source=ls('c,*');
+    source=source(1:end-1);
+    %source='c,rfhp0.1Hz';
 end
 [pathstr, name, ext] = fileparts(source);
 source=[name,ext];
