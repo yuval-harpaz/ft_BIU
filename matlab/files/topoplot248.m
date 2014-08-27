@@ -1,4 +1,4 @@
-function topoplot248(vec,cfg,sortedChans);
+function fig1=topoplot248(vec,cfg,sortedChans)
 %% reading weights
 % topoplot of 248 values
 if ~exist('sortedChans','var')
@@ -15,4 +15,4 @@ if sortedChans
 end
 
 wts.avg(:,1)=vec;
-figure;ft_topoplotER(cfg,wts);
+fig1=ft_topoplotER(cfg,wts);
