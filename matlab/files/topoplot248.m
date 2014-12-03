@@ -4,9 +4,10 @@ function fig1=topoplot248(vec,cfg,sortedChans)
 if ~exist('sortedChans','var')
     sortedChans=false;
 end
-if ~exist ('cfg','var')
-    cfg=[];
-end
+cfg.layout='4D248.lay';
+% if ~exist ('cfg','var')
+%     cfg=[];
+% end
 load ~/ft_BIU/matlab/plotwts
 if sortedChans
     for chani=1:248
