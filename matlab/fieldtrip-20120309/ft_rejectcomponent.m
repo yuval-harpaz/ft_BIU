@@ -189,10 +189,10 @@ if isfield(data, 'grad') || (isfield(data, 'elec') && isfield(data.elec, 'tra'))
   end
   
   % remove the unused components from the balancing and from the tra
-  [junk, remove]    = match_str(comp.label, tmp.label);
+  [~, remove]    = match_str(comp.label, tmp.label);
   tmp.tra(remove,:) = [];
   tmp.label(remove) = [];
-  [junk, remove]    = match_str(comp.label, tmp.balance.(invcompfield).labelnew);
+  [~, remove]    = match_str(comp.label, tmp.balance.(invcompfield).labelnew);
   tmp.balance.(invcompfield).tra(remove, :)   = [];
   tmp.balance.(invcompfield).labelnew(remove) = [];
   data.(sensfield)  = tmp;
