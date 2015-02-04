@@ -25,6 +25,9 @@ if isempty(cfg)
     cfg.criterion='sd';
     cfg.critval=3;
 end
+if ~existAndFull('plt')
+    plt=1;
+end
 % 
 switch cfg.method
     case 'abs'
@@ -49,6 +52,7 @@ bad=find(trials>thr);
 badn=num2str(length(bad));
 display(['rejected ',badn,' trials']);
 if plt
+    figure;
     plot(trials,'o')
     hold on
     plot(bad,trials(bad),'r.')

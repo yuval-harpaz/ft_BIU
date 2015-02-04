@@ -13,8 +13,10 @@ if strcmp(cfg.method,'RMS')
     doRMS=true;
 elseif strcmp(cfg.method,'mean')
     doMean=true;
+elseif strcmp(cfg.method,'meanAbs')
+    doMeanAbs=true;
 else
-    error('cfg.method can be RMS or, no or just RMS.')
+    error('cfg.method unclear')
 end
 if ischar(cfg.neighbours)
     if strcmp(cfg.neighbours,'all')
@@ -43,7 +45,7 @@ if ischar(cfg.neighbours)
         cfg.neighbours(1,2).label='A18';
         cfg.neighbours(1,2).neighblabel(1:114,1)=LRpairs(2:115,2);
     end
-end          
+end
 newData=origData;
 if isfield(origData,'individual')
     dataType='grdAvg';
@@ -63,6 +65,9 @@ if strcmp(dataType,'grdAvg')
         elseif doMean
             newData.individual(:,chi,:)=...
                 squeeze(mean(origData.individual(:,clusti,:),2));
+        elseif doMeanAbs
+            newData.individual(:,chi,:)=...
+                squeeze(mean(abs(origData.individual(:,clusti,:)),2));
         end
     end
 else
@@ -83,4 +88,3 @@ end
 newData.method=cfg.method;
 end
 
-    
