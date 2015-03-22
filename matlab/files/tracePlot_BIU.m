@@ -1,11 +1,17 @@
 function tracePlot_BIU(begTime,endTime,source)
 if ~exist('source','var')
-    source='c,rfhp1.0Hz,ee';
+    source='c,rfhp0.1Hz';
 end
 if ~exist('begTime','var')
+    begTime=[];
+end
+if isempty(begTime)
     begTime=5;
 end
 if ~exist('endTime','var')
+    endTime=[];
+end
+if isempty(endTime)
     endTime=15;
 end
 cfg.dataset=source;
