@@ -24,7 +24,7 @@ R         = R * diag(1./vx);
 % Ensure that R is O(3)
 [U,S,V] = svd(R);
 R       = U*V';
-if any(abs(diag(S)-1)>1e-3), warning('QFORM0 representation has been rounded.'); end;
+%if any(abs(diag(S)-1)>1e-3), warning('QFORM0 representation has been rounded.'); end;
 
 % Ensure that R is SO(3)
 if det(R)>0
