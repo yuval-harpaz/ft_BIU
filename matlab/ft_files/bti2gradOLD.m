@@ -86,7 +86,7 @@ elseif isfield(hdr, 'config'),
   for i=1:numALL
     numcoils(selALL(i)) = hdr.config.channel_data(selALL(i)).device_data.total_loops;
   end
-  numcoils=numcoils>0;
+  numcoils=double(numcoils>0);
   totalcoils = sum(numcoils);
   
   % start with empty gradiometer structure

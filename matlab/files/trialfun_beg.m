@@ -8,7 +8,7 @@ function [trl, event] = trialfun_beg(cfg);
 % cfg.trialdef.poststim : length of epoch, default - whole length.
 
 fprintf('reading header...\n');
-hdr = read_header(cfg.dataset);
+hdr = ft_read_header(cfg.dataset);
 %fprintf('reading events from file...\n');
 % event= read_event(cfg.dataset);
 event{1,1}.type='TRIGGER';
