@@ -9,12 +9,20 @@ end
 % find high amplitude channels
 %mostActive=abs(M)>thr;
 
-pos=data.grad.chanpos(chans,:);
 
 srci=false(size(pnt,1),1);
-for i=1:length(chans)
-    distances=sqrt(sum((pnt-repmat(pos(i,:),size(pnt,1),1)).^2,2));
-    srci(distances<dist)=true;
+if size(chans,2)==3
+    pos=chans;
+    for i=1:size(chans,1)
+        distances=sqrt(sum((pnt-repmat(pos(i,:),size(pnt,1),1)).^2,2));
+        srci(distances<dist)=true;
+    end
+else
+    pos=data.grad.chanpos(chans,:);
+    for i=1:size(chans,1)
+        distances=sqrt(sum((pnt-repmat(pos(i,:),size(pnt,1),1)).^2,2));
+        srci(distances<dist)=true;
+    end
 end
 sum(srci)
 
