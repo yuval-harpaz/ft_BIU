@@ -14,10 +14,14 @@ end
 if ~isfield(cfg,'vol')
     if exist('./hs_file','file')
         hs=ft_read_headshape('hs_file');
-        hs=hs.pnt*1000;
-        [cfg.vol.o,cfg.vol.r]=fitsphere(hs);
-        cfg.vol.type='singlesphere';
+    elseif exist('1','dir')
+        hs=ft_read_headshape('1/hs_file');
+    else
+        error('where is the bloody headshape?')
     end
+    hs=hs.pnt*1000;
+    [cfg.vol.o,cfg.vol.r]=fitsphere(hs);
+    cfg.vol.type='singlesphere';
 end
 cfg.vol=ft_convert_units(cfg.vol,'mm');
 if ~isfield(cfg,'grid')
@@ -44,7 +48,7 @@ switch cfg.method
         end
         if strcmp(cfg.vol.type,'singlesphere')
             % shift center of sphere to be at y=0
-            offzero=cfg.vol.o(2)
+            offzero=cfg.vol.o(2);
             data.grad.chanpos(:,2)=data.grad.chanpos(:,2)-offzero;
             data.grad.coilpos(:,2)=data.grad.coilpos(:,2)-offzero;
             if isfield(cfg.grid,'zgrid');
@@ -75,6 +79,7 @@ switch cfg.method
         source=zeros(length(cfg.grid.inside),3);
         dist=zeros(length(cfg.grid.inside),1);
         noise=dist;
+        goodness=dist;
         if ~isfield(cfg,'symmetry')
             warning off
             for srci=[find(cfg.grid.inside)]';
@@ -98,6 +103,10 @@ switch cfg.method
                 logi3=cfg.grid.pos(:,3)==cfg.grid.pos(left(lefti),3);
                 right(lefti)=find((logi1+logi2+logi3)==3);
             end
+            inside=false(size(cfg.grid.inside));
+            inside(left)=true;
+            inside(right)=true;
+            inside(~cfg.grid.inside)=false;
             warning off
             for srci=1:length(left);
                 if ~right(srci)==0
@@ -108,11 +117,15 @@ switch cfg.method
                     if ~isempty(lfl) && ~isempty(lfr)
                         for coli=1:3
                             tmp=[lfl(:,coli),lfr(:,coli)]\M;
-                            srcL(srci,coli)=tmp(1); srcR(srci,coli)=tmp(2);
+                            srcL(srci,coli)=tmp(1);
+                            srcR(srci,coli)=tmp(2);
                             tmp=[lfl(:,coli),lfr(:,coli)]\Mrand;
-                            noiseL(srci,coli)=tmp(1); noiseR(srci,coli)=tmp(2);
+                            noiseL(srci,coli)=tmp(1);
+                            noiseR(srci,coli)=tmp(2);
                         end
                         
+                        goodness(lefti)=mean(abs(M))-mean(abs(M'-(srcL(srci,:)*lfl'+srcR(srci,:)*lfr')));
+                        goodness(righti)=goodness(left(srci));
                     end
                 end
             end
@@ -122,13 +135,19 @@ switch cfg.method
             ns(:,2)=noiseL(:,2)-noiseR(:,2);
             source(left,1:3)=srcL;
             source(right,1:3)=srcR;
-            noise(left,1:3)=srcL;
-            noise(right,1:3)=srcR;
+            noise(left,1:3)=ns;
+            noise(right,1:3)=ns;
             dist=sqrt(sum((cfg.grid.pos-repmat(cfg.vol.o,size(source,1),1)).^2,2));
-            noise=sqrt(sum(randNoise'.^2));
+            %noise=sqrt(sum(randNoise'.^2));
             mom=sqrt(sum(source'.^2));
-            pow=[];
-            [~,maxi]=max(abs(srcA)+abs(srcB));
+            NS=sqrt(sum(noise.^2,2));
+            figure;plot3pnt(hs,'.k');hold on;
+            scatter3pnt(cfg.grid.pos(inside,:),[],...
+                goodness(inside))
+            figure;plot3pnt(hs,'.k');hold on;
+            scatter3pnt(cfg.grid.pos(inside,:),[],...
+                mom(inside)')
+            %FIXME get dipole output
         end
         
         
