@@ -88,8 +88,8 @@ switch cfg.method
                 noise(srci,1:3)=cfg.grid.leadfield{srci}\Mrand;
             end
             warning on
-            noise=sqrt(sum(randNoise'.^2));
-            mom=sqrt(sum(source'.^2));
+            %noise=sqrt(sum(randNoise'.^2));
+            %mom=sqrt(sum(source'.^2));
         else
             % for single sphere only
             
@@ -120,37 +120,47 @@ switch cfg.method
                             srcL(srci,coli)=tmp(1);
                             srcR(srci,coli)=tmp(2);
                             tmp=[lfl(:,coli),lfr(:,coli)]\Mrand;
-                            noiseL(srci,coli)=tmp(1);
-                            noiseR(srci,coli)=tmp(2);
+                            %noiseL(srci,coli)=tmp(1);
+                            %noiseR(srci,coli)=tmp(2);
                         end
-                        
-                        goodness(lefti)=mean(abs(M))-mean(abs(M'-(srcL(srci,:)*lfl'+srcR(srci,:)*lfr')));
-                        goodness(righti)=goodness(left(srci));
+                        [~,gof]=fit(M,(srcL(srci,:)*lfl'+srcR(srci,:)*lfr')','poly1');
+                        %goodness(lefti)=mean(abs(M))-mean(abs(M'-(srcL(srci,:)*lfl'+srcR(srci,:)*lfr')));
+                        %goodness(lefti)=gof.rsquare;
+                        goodness(lefti)=corr(M,(srcL(srci,:)*lfl'+srcR(srci,:)*lfr')').^2;
+                        goodness(righti)=goodness(lefti);
                     end
                 end
             end
             src=srcL+srcR;
             src(:,2)=srcL(:,2)-srcR(:,2);
-            ns=noiseL+noiseR;
-            ns(:,2)=noiseL(:,2)-noiseR(:,2);
+            %ns=noiseL+noiseR;
+            %ns(:,2)=noiseL(:,2)-noiseR(:,2);
             source(left,1:3)=srcL;
             source(right,1:3)=srcR;
-            noise(left,1:3)=ns;
-            noise(right,1:3)=ns;
+            %noise(left,1:3)=ns;
+            %noise(right,1:3)=ns;
             dist=sqrt(sum((cfg.grid.pos-repmat(cfg.vol.o,size(source,1),1)).^2,2));
             %noise=sqrt(sum(randNoise'.^2));
-            mom=sqrt(sum(source'.^2));
-            NS=sqrt(sum(noise.^2,2));
-            figure;plot3pnt(hs,'.k');hold on;
-            scatter3pnt(cfg.grid.pos(inside,:),[],...
-                goodness(inside))
-            figure;plot3pnt(hs,'.k');hold on;
-            scatter3pnt(cfg.grid.pos(inside,:),[],...
-                mom(inside)')
-            %FIXME get dipole output
+            %mom=sqrt(sum(source'.^2));
+            %NS=sqrt(sum(noise.^2,2));
+%             figure;plot3pnt(hs,'.k');hold on;
+%             scatter3pnt(cfg.grid.pos(inside,:),[],...
+%                 goodness(inside))
+            [~,maxi]=max(goodness(left));
+            lfl=cfg.grid.leadfield{left(maxi)};
+            lfr=cfg.grid.leadfield{right(maxi)};
+            dip=[];
+            dip.label=data.label;
+            dip.dip.pos=[cfg.grid.pos(left(maxi),:);cfg.grid.pos(right(maxi),:)];
+            dip.Vdata=M;
+            dip.Vmodel=(srcL(maxi,:)*lfl'+srcR(maxi,:)*lfr')';
+            dip.time=cfg.latency;
+            dip.dimord=data.dimord;
+            dip.mom=[srcL(maxi,:)';srcR(maxi,:)'];
+            dip.leadfield{1,1}=lfl;
+            dip.leadfield{1,2}=lfr;
+            dip.grid_index=[left(maxi),right(maxi)];
         end
-        
-        
 end
 
 
