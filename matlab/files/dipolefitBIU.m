@@ -1,4 +1,4 @@
-function dip=dipolefitBIU(cfg,data)
+function [dip,R]=dipolefitBIU(cfg,data)
 % dipole fit for fieldtrip structure data
 % by default, makes single sphere vol from headshape
 % please give cfg.latency (sec) or else!
@@ -6,7 +6,7 @@ function dip=dipolefitBIU(cfg,data)
 % note that coordinates here are in PRI order to fit the headshape
 % if you use cfg.method = 'fieldtrip' you can use cfg options from
 % ft_dipolefitting
-
+R=[];
 data.grad=ft_convert_units(data.grad,'mm');
 if ~isfield(cfg,'method')
     cfg.method='fieldtrip';
@@ -65,7 +65,8 @@ switch cfg.method
         else
             dip=ft_dipolefitting(cfg,data);
         end
-    case '\'
+    otherwise
+        
         M=data.avg(:,nearest(data.time,cfg.latency(1)):nearest(data.time,cfg.latency(2)));
         
 %         Mscale=max(abs(M))./10;
@@ -73,26 +74,40 @@ switch cfg.method
         if size(M,2)>1
             M=mean(M,2);
         end
-        Mrand=rand(size(M));
-        Mrand=(Mrand-0.5)*prctile(abs(M),25);
+        %Mrand=rand(size(M));
+        %Mrand=(Mrand-0.5)*prctile(abs(M),25);
         
         source=zeros(length(cfg.grid.inside),3);
-        dist=zeros(length(cfg.grid.inside),1);
-        noise=dist;
-        goodness=dist;
+        goodness=zeros(length(cfg.grid.inside),1);
         if ~isfield(cfg,'symmetry')
-            warning off
+            warning off; % because of '\' warnings
             for srci=[find(cfg.grid.inside)]';
-                source(srci,1:3)=cfg.grid.leadfield{srci}\M;
-                dist(srci)=sqrt(sum((cfg.grid.pos(srci,:)-cfg.vol.o).^2));
-                noise(srci,1:3)=cfg.grid.leadfield{srci}\Mrand;
+                %
+                switch cfg.method
+                    case '\'
+                        source(srci,1:3)=cfg.grid.leadfield{srci}\M;
+                    case 'pinv' % identical to fieldtrip
+                        source(srci,1:3)=pinv(cfg.grid.leadfield{srci})*M;
+                    case '*'
+                        source(srci,1:3)=cfg.grid.leadfield{srci}'*M;
+                end
+                goodness(srci)=corr(M,(source(srci,:)*cfg.grid.leadfield{srci}')').^2;
             end
+            [~,maxi]=max(goodness);
             warning on
-            %noise=sqrt(sum(randNoise'.^2));
-            %mom=sqrt(sum(source'.^2));
+            dip=[];
+            dip.label=data.label;
+            dip.dip.pos=cfg.grid.pos(maxi,:);
+            dip.Vdata=M;
+            dip.Vmodel=[source(maxi,:)*cfg.grid.leadfield{maxi}']';
+            dip.time=cfg.latency;
+            dip.dimord=data.dimord;
+            dip.dip.mom=source(maxi,:)';
+            dip.leadfield{1,1}=cfg.grid.leadfield{maxi};
+            dip.grid_index=maxi;
+            R=goodness;
         else
             % for single sphere only
-            
             left=find(cfg.grid.pos(:,2)>cfg.vol.o(2));
             srcL=zeros(length(left),3);
             srcR=srcL;noiseL=srcL;noiseR=srcL;
@@ -119,13 +134,8 @@ switch cfg.method
                             tmp=[lfl(:,coli),lfr(:,coli)]\M;
                             srcL(srci,coli)=tmp(1);
                             srcR(srci,coli)=tmp(2);
-                            tmp=[lfl(:,coli),lfr(:,coli)]\Mrand;
-                            %noiseL(srci,coli)=tmp(1);
-                            %noiseR(srci,coli)=tmp(2);
                         end
                         [~,gof]=fit(M,(srcL(srci,:)*lfl'+srcR(srci,:)*lfr')','poly1');
-                        %goodness(lefti)=mean(abs(M))-mean(abs(M'-(srcL(srci,:)*lfl'+srcR(srci,:)*lfr')));
-                        %goodness(lefti)=gof.rsquare;
                         goodness(lefti)=corr(M,(srcL(srci,:)*lfl'+srcR(srci,:)*lfr')').^2;
                         goodness(righti)=goodness(lefti);
                     end
@@ -156,10 +166,11 @@ switch cfg.method
             dip.Vmodel=(srcL(maxi,:)*lfl'+srcR(maxi,:)*lfr')';
             dip.time=cfg.latency;
             dip.dimord=data.dimord;
-            dip.mom=[srcL(maxi,:)';srcR(maxi,:)'];
+            dip.dip.mom=[srcL(maxi,:)';srcR(maxi,:)'];
             dip.leadfield{1,1}=lfl;
             dip.leadfield{1,2}=lfr;
             dip.grid_index=[left(maxi),right(maxi)];
+            R=goodness;
         end
 end
 
