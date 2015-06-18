@@ -22,6 +22,8 @@ if ~isfield(cfg,'vol')
     hs=hs.pnt*1000;
     [cfg.vol.o,cfg.vol.r]=fitsphere(hs);
     cfg.vol.type='singlesphere';
+elseif ~strcmp(cfg.vol.type,'singlesphere')
+    error ('only singlesphere type is possible for now')
 end
 cfg.vol=ft_convert_units(cfg.vol,'mm');
 if ~isfield(cfg,'grid')
@@ -33,9 +35,7 @@ if ~isfield(cfg,'grid')
     %cfg1.grid.pos        = pnt;
     %cfg1.grid.inside     = true(length(pnt),1);
     cfg1.vol=cfg.vol;
-    if strcmp (cfg.vol.type,'singlesphere')
-        cfg1.grid.ygrid=cfg1.grid.ygrid+cfg.vol.o(2); % for symmetry
-    end
+    cfg1.grid.ygrid=cfg1.grid.ygrid+cfg.vol.o(2); % for symmetry
     cfg.grid=ft_prepare_leadfield(cfg1,data);
 end
 cfg.method=lower(cfg.method);
@@ -46,37 +46,12 @@ switch cfg.method
                 cfg.numdipoles = 2;
             end
         end
-        if strcmp(cfg.vol.type,'singlesphere')
-            % shift center of sphere to be at y=0
-            offzero=cfg.vol.o(2);
-            data.grad.chanpos(:,2)=data.grad.chanpos(:,2)-offzero;
-            data.grad.coilpos(:,2)=data.grad.coilpos(:,2)-offzero;
-            if isfield(cfg.grid,'zgrid');
-                cfg.grid.zgrid=cfg.grid.zgrid-offzero;
-            end
-            if isfield(cfg.grid,'pos');
-                cfg.grid.pos(:,2)=cfg.grid.pos(:,2)-offzero;
-            end
-            cfg.vol.o(2)=0;
-            dip=ft_dipolefitting(cfg,data);
-            dip.grad.chanpos(:,2)=dip.grad.chanpos(:,2)+offzero;
-            dip.grad.coilpos(:,2)=dip.grad.coilpos(:,2)+offzero;
-            dip.dip.pos(:,2)=dip.dip.pos(:,2)+offzero;
-        else
-            dip=ft_dipolefitting(cfg,data);
-        end
+        dip=ft_dipolefitting(cfg,data);
     otherwise
-        
         M=data.avg(:,nearest(data.time,cfg.latency(1)):nearest(data.time,cfg.latency(2)));
-        
-%         Mscale=max(abs(M))./10;
-%         M=M./Mscale;
         if size(M,2)>1
             M=mean(M,2);
         end
-        %Mrand=rand(size(M));
-        %Mrand=(Mrand-0.5)*prctile(abs(M),25);
-        
         source=zeros(length(cfg.grid.inside),3);
         goodness=zeros(length(cfg.grid.inside),1);
         if ~isfield(cfg,'symmetry')
@@ -99,7 +74,7 @@ switch cfg.method
             dip.label=data.label;
             dip.dip.pos=cfg.grid.pos(maxi,:);
             dip.Vdata=M;
-            dip.Vmodel=[source(maxi,:)*cfg.grid.leadfield{maxi}']';
+            dip.Vmodel=cfg.grid.leadfield{maxi}*source(maxi,:)';
             dip.time=cfg.latency;
             dip.dimord=data.dimord;
             dip.dip.mom=source(maxi,:)';
@@ -107,10 +82,10 @@ switch cfg.method
             dip.grid_index=maxi;
             R=goodness;
         else
-            % for single sphere only
+            % find left-right grid pairs
             left=find(cfg.grid.pos(:,2)>cfg.vol.o(2));
             srcL=zeros(length(left),3);
-            srcR=srcL;noiseL=srcL;noiseR=srcL;
+            srcR=srcL;
             right=[];
             for lefti=1:length(left)
                 logi1=cfg.grid.pos(:,1)==cfg.grid.pos(left(lefti),1);
@@ -131,13 +106,35 @@ switch cfg.method
                     lfr=cfg.grid.leadfield{righti};
                     if ~isempty(lfl) && ~isempty(lfr)
                         for coli=1:3
-                            tmp=[lfl(:,coli),lfr(:,coli)]\M;
+                            switch cfg.method
+                                case '\' % same as pinv for symmetric
+                                    tmp=[lfl(:,coli),lfr(:,coli)]\M;
+                                case 'pinv'
+                                    tmp=pinv([lfl(:,coli),lfr(:,coli)])*M;
+                                case '*'
+                                    tmp=[lfl(:,coli),lfr(:,coli)]'*M;
+                            end
                             srcL(srci,coli)=tmp(1);
                             srcR(srci,coli)=tmp(2);
                         end
-                        [~,gof]=fit(M,(srcL(srci,:)*lfl'+srcR(srci,:)*lfr')','poly1');
-                        goodness(lefti)=corr(M,(srcL(srci,:)*lfl'+srcR(srci,:)*lfr')').^2;
+                        L=srcL(srci,:);
+                        R=srcR(srci,:);
+                        LL=L-abs(R)./sum(abs([R;L])).*(L-R);
+                        RR=LL;
+                        LL(2)=L(2)-abs(R(2))./sum(abs([R(2);L(2)])).*(L(2)+R(2));
+                        RR(2)=-LL(2);
+                        scale=mean(abs(LL));
+                        LL=LL./scale;
+                        RR=RR./scale;
+                        lfL=lfl*LL';
+                        lfR=lfr*RR';
+                        tmp=pinv([lfL,lfR])*M;
+                        Vmodel=lfL*tmp(1)+lfR*tmp(2);
+                        %[~,gof]=fit(M,(srcL(srci,:)*lfl'+srcR(srci,:)*lfr')','poly1');
+                        goodness(lefti)=corr(M,Vmodel).^2;
+                        %goodness(lefti)=corr(M,(srcL(srci,:)*lfl'+srcR(srci,:)*lfr')').^2;
                         goodness(righti)=goodness(lefti);
+                        
                     end
                 end
             end
@@ -159,11 +156,26 @@ switch cfg.method
             [~,maxi]=max(goodness(left));
             lfl=cfg.grid.leadfield{left(maxi)};
             lfr=cfg.grid.leadfield{right(maxi)};
+            
+            L=srcL(maxi,:);
+            R=srcR(maxi,:);
+            LL=L-abs(R)./sum(abs([R;L])).*(L-R);
+            RR=LL;
+            LL(2)=L(2)-abs(R(2))./sum(abs([R(2);L(2)])).*(L(2)+R(2));
+            RR(2)=-LL(2);
+            scale=mean(abs(LL));
+            LL=LL./scale;
+            RR=RR./scale;
+            lfL=lfl*LL';
+            lfR=lfr*RR';
+            tmp=pinv([lfL,lfR])*M;
+            Vmodel=lfL*tmp(1)+lfR*tmp(2);
+            FIXME - set leadfield and moment
             dip=[];
             dip.label=data.label;
             dip.dip.pos=[cfg.grid.pos(left(maxi),:);cfg.grid.pos(right(maxi),:)];
             dip.Vdata=M;
-            dip.Vmodel=(srcL(maxi,:)*lfl'+srcR(maxi,:)*lfr')';
+            dip.Vmodel=lfl*srcL(maxi,:)'+lfr*srcR(maxi,:)';  %  (srcL(maxi,:)*lfl'+srcR(maxi,:)*lfr')';%cfg.grid.leadfield{maxi}*source(maxi,:)'
             dip.time=cfg.latency;
             dip.dimord=data.dimord;
             dip.dip.mom=[srcL(maxi,:)';srcR(maxi,:)'];
