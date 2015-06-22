@@ -48,7 +48,8 @@ switch cfg.method
         end
         dip=ft_dipolefitting(cfg,data);
     otherwise
-        M=data.avg(:,nearest(data.time,cfg.latency(1)):nearest(data.time,cfg.latency(2)));
+        t=nearest(data.time,cfg.latency(1)):nearest(data.time,cfg.latency(2));
+        M=data.avg(:,t);
         if size(M,2)>1
             M=mean(M,2);
         end
@@ -57,7 +58,6 @@ switch cfg.method
         if ~isfield(cfg,'symmetry')
             warning off; % because of '\' warnings
             for srci=[find(cfg.grid.inside)]';
-                %
                 switch cfg.method
                     case '\'
                         source(srci,1:3)=cfg.grid.leadfield{srci}\M;
@@ -80,6 +80,8 @@ switch cfg.method
             dip.dip.mom=source(maxi,:)';
             dip.leadfield{1,1}=cfg.grid.leadfield{maxi};
             dip.grid_index=maxi;
+            dip.dip.rv=sum((dip.Vdata-dip.Vmodel).^2) ./ sum(dip.Vdata.^2);
+            dip.dip.pot=dip.Vmodel;
             R=goodness;
         else
             % find left-right grid pairs
@@ -105,18 +107,30 @@ switch cfg.method
                     lfl=cfg.grid.leadfield{lefti};
                     lfr=cfg.grid.leadfield{righti};
                     if ~isempty(lfl) && ~isempty(lfr)
-                        for coli=1:3
+%                         for coli=1:3
+%                             switch cfg.method
+%                                 case '\' % same as pinv for symmetric
+%                                     tmp=[lfl(:,coli),lfr(:,coli)]\M;
+%                                 case 'pinv'
+%                                     tmp=pinv([lfl(:,coli),lfr(:,coli)])*M;
+%                                 case '*'
+%                                     tmp=[lfl(:,coli),lfr(:,coli)]'*M;
+%                             end
+%                             srcL(srci,coli)=tmp(1);
+%                             srcR(srci,coli)=tmp(2);
+%                         end
+                        
                             switch cfg.method
                                 case '\' % same as pinv for symmetric
-                                    tmp=[lfl(:,coli),lfr(:,coli)]\M;
+                                    tmp=[lfl(:,:),lfr(:,:)]\M;
                                 case 'pinv'
-                                    tmp=pinv([lfl(:,coli),lfr(:,coli)])*M;
+                                    tmp=pinv([lfl(:,:),lfr(:,:)])*M;
                                 case '*'
-                                    tmp=[lfl(:,coli),lfr(:,coli)]'*M;
+                                    tmp=[lfl(:,:),lfr(:,:)]'*M;
                             end
-                            srcL(srci,coli)=tmp(1);
-                            srcR(srci,coli)=tmp(2);
-                        end
+                            srcL(srci,1:3)=tmp(1:3);
+                            srcR(srci,1:3)=tmp(4:6);
+
                         L=srcL(srci,:);
                         R=srcR(srci,:);
                         LL=L-abs(R)./sum(abs([R;L])).*(L-R);
@@ -128,31 +142,27 @@ switch cfg.method
                         RR=RR./scale;
                         lfL=lfl*LL';
                         lfR=lfr*RR';
-                        tmp=pinv([lfL,lfR])*M;
+                        switch cfg.method
+                            case '\' % same as pinv for symmetric
+                                tmp=[lfL,lfR]\M;
+                            case 'pinv'
+                                tmp=pinv([lfL,lfR])*M;
+                            case '*'
+                                tmp=[lfL,lfR]'*M;
+                        end
                         Vmodel=lfL*tmp(1)+lfR*tmp(2);
-                        %[~,gof]=fit(M,(srcL(srci,:)*lfl'+srcR(srci,:)*lfr')','poly1');
                         goodness(lefti)=corr(M,Vmodel).^2;
-                        %goodness(lefti)=corr(M,(srcL(srci,:)*lfl'+srcR(srci,:)*lfr')').^2;
                         goodness(righti)=goodness(lefti);
                         
                     end
                 end
             end
+            warning on
             src=srcL+srcR;
             src(:,2)=srcL(:,2)-srcR(:,2);
-            %ns=noiseL+noiseR;
-            %ns(:,2)=noiseL(:,2)-noiseR(:,2);
             source(left,1:3)=srcL;
             source(right,1:3)=srcR;
-            %noise(left,1:3)=ns;
-            %noise(right,1:3)=ns;
             dist=sqrt(sum((cfg.grid.pos-repmat(cfg.vol.o,size(source,1),1)).^2,2));
-            %noise=sqrt(sum(randNoise'.^2));
-            %mom=sqrt(sum(source'.^2));
-            %NS=sqrt(sum(noise.^2,2));
-%             figure;plot3pnt(hs,'.k');hold on;
-%             scatter3pnt(cfg.grid.pos(inside,:),[],...
-%                 goodness(inside))
             [~,maxi]=max(goodness(left));
             lfl=cfg.grid.leadfield{left(maxi)};
             lfr=cfg.grid.leadfield{right(maxi)};
@@ -163,25 +173,33 @@ switch cfg.method
             RR=LL;
             LL(2)=L(2)-abs(R(2))./sum(abs([R(2);L(2)])).*(L(2)+R(2));
             RR(2)=-LL(2);
-            scale=mean(abs(LL));
-            LL=LL./scale;
-            RR=RR./scale;
             lfL=lfl*LL';
             lfR=lfr*RR';
-            tmp=pinv([lfL,lfR])*M;
-            Vmodel=lfL*tmp(1)+lfR*tmp(2);
-            FIXME - set leadfield and moment
+%             switch cfg.method
+%                 case '\' % same as pinv for symmetric
+%                     momLR=[lfL,lfR]\M;
+%                 case 'pinv'
+%                     momLR=pinv([lfL,lfR])*M;
+%                 case '*'
+%                     momLR=[lfL,lfR]'*M;
+%             end
+            momLR=pinv([lfL,lfR])*M;
+            Vmodel=lfL*momLR(1)+lfR*momLR(2);
+            %Vmodel=sum(repmat(momLR(1).*LL,size(lfl,1),1).*lfl,2)+sum(repmat(momLR(2).*RR,size(lfr,1),1).*lfr,2);
+            %Vmodel=[lfl,lfr]*dip.dip.mom
             dip=[];
             dip.label=data.label;
             dip.dip.pos=[cfg.grid.pos(left(maxi),:);cfg.grid.pos(right(maxi),:)];
             dip.Vdata=M;
-            dip.Vmodel=lfl*srcL(maxi,:)'+lfr*srcR(maxi,:)';  %  (srcL(maxi,:)*lfl'+srcR(maxi,:)*lfr')';%cfg.grid.leadfield{maxi}*source(maxi,:)'
+            dip.Vmodel=Vmodel;  %  (srcL(maxi,:)*lfl'+srcR(maxi,:)*lfr')';%cfg.grid.leadfield{maxi}*source(maxi,:)'
             dip.time=cfg.latency;
             dip.dimord=data.dimord;
-            dip.dip.mom=[srcL(maxi,:)';srcR(maxi,:)'];
+            dip.dip.mom=[momLR(1).*LL';momLR(2).*RR'];
             dip.leadfield{1,1}=lfl;
             dip.leadfield{1,2}=lfr;
             dip.grid_index=[left(maxi),right(maxi)];
+            dip.dip.pot=dip.Vmodel;
+            dip.dip.rv=sum((dip.Vdata-dip.Vmodel).^2) ./ sum(dip.Vdata.^2); %relative residual variance
             R=goodness;
         end
 end
