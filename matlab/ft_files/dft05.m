@@ -1,7 +1,8 @@
 function [filt,est] = dft05(dat, Fs, Fl)
 % based on the ft function as described below, just wanted to get more OP
 % options, Yuval
-% designed to allow processing also when you only have
+% designed to allow processing also when you only have half cycle (1Hz
+% with 500ms window)
 
 % FT_PREPROC_DFTFILTER applies a notch filter to the data to remove the 50Hz
 % or 60Hz line noise components. This is done by fitting a sine and cosine

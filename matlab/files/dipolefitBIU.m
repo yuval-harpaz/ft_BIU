@@ -1,4 +1,4 @@
-function [dip,R]=dipolefitBIU(cfg,data)
+function [dip,R,mom]=dipolefitBIU(cfg,data)
 % dipole fit for fieldtrip structure data
 % by default, makes single sphere vol from headshape
 % please give cfg.latency (sec) or else!
@@ -6,7 +6,11 @@ function [dip,R]=dipolefitBIU(cfg,data)
 % note that coordinates here are in PRI order to fit the headshape
 % if you use cfg.method = 'fieldtrip' you can use cfg options from
 % ft_dipolefitting
-R=[];
+%
+% dip is ft_structure for dipole
+% R is the map of R distribution, sort of source localization image
+% mom is the direction of each dipole in R (symmetric)
+R=[];mom=[];
 data.grad=ft_convert_units(data.grad,'mm');
 if ~isfield(cfg,'method')
     cfg.method='fieldtrip';
@@ -29,9 +33,9 @@ cfg.vol=ft_convert_units(cfg.vol,'mm');
 if ~isfield(cfg,'grid')
     %[-120 120 -90 90 -20 150]
     cfg1=[];
-    cfg1.grid.xgrid      =  -120:10:120; 
+    cfg1.grid.xgrid      =  -120:10:120;
     cfg1.grid.ygrid      =  -90:10:90;
-    cfg1.grid.zgrid      =  -20:10:150; 
+    cfg1.grid.zgrid      =  -20:10:150;
     %cfg1.grid.pos        = pnt;
     %cfg1.grid.inside     = true(length(pnt),1);
     cfg1.vol=cfg.vol;
@@ -52,6 +56,10 @@ switch cfg.method
         M=data.avg(:,t);
         if size(M,2)>1
             M=mean(M,2);
+        end
+        if length(M)>length(cfg.grid.label)
+            [~,chi]=ismember(cfg.grid.label,data.label);
+            M=M(chi);
         end
         source=zeros(length(cfg.grid.inside),3);
         goodness=zeros(length(cfg.grid.inside),1);
@@ -83,6 +91,7 @@ switch cfg.method
             dip.dip.rv=sum((dip.Vdata-dip.Vmodel).^2) ./ sum(dip.Vdata.^2);
             dip.dip.pot=dip.Vmodel;
             R=goodness;
+            dip.cfg=cfg;
         else
             % find left-right grid pairs
             left=find(cfg.grid.pos(:,2)>cfg.vol.o(2));
@@ -91,14 +100,19 @@ switch cfg.method
             right=[];
             for lefti=1:length(left)
                 logi1=cfg.grid.pos(:,1)==cfg.grid.pos(left(lefti),1);
-                logi2=cfg.grid.pos(:,2)==2*cfg.vol.o(2)-cfg.grid.pos(left(lefti),2);
+                logi2=abs(cfg.grid.pos(:,2)-(2*cfg.vol.o(2)-cfg.grid.pos(left(lefti),2)))<1e-10;
                 logi3=cfg.grid.pos(:,3)==cfg.grid.pos(left(lefti),3);
-                right(lefti)=find((logi1+logi2+logi3)==3);
+                try
+                    right(lefti)=find((logi1+logi2+logi3)==3);
+                catch
+                    error(['cannot find a right pair for grid index ',num2str(left(lefti))]);
+                end
             end
             inside=false(size(cfg.grid.inside));
             inside(left)=true;
             inside(right)=true;
             inside(~cfg.grid.inside)=false;
+            mom=zeros(size(cfg.grid.pos));
             warning off
             for srci=1:length(left);
                 if ~right(srci)==0
@@ -107,30 +121,30 @@ switch cfg.method
                     lfl=cfg.grid.leadfield{lefti};
                     lfr=cfg.grid.leadfield{righti};
                     if ~isempty(lfl) && ~isempty(lfr)
-%                         for coli=1:3
-%                             switch cfg.method
-%                                 case '\' % same as pinv for symmetric
-%                                     tmp=[lfl(:,coli),lfr(:,coli)]\M;
-%                                 case 'pinv'
-%                                     tmp=pinv([lfl(:,coli),lfr(:,coli)])*M;
-%                                 case '*'
-%                                     tmp=[lfl(:,coli),lfr(:,coli)]'*M;
-%                             end
-%                             srcL(srci,coli)=tmp(1);
-%                             srcR(srci,coli)=tmp(2);
-%                         end
+                        %                         for coli=1:3
+                        %                             switch cfg.method
+                        %                                 case '\' % same as pinv for symmetric
+                        %                                     tmp=[lfl(:,coli),lfr(:,coli)]\M;
+                        %                                 case 'pinv'
+                        %                                     tmp=pinv([lfl(:,coli),lfr(:,coli)])*M;
+                        %                                 case '*'
+                        %                                     tmp=[lfl(:,coli),lfr(:,coli)]'*M;
+                        %                             end
+                        %                             srcL(srci,coli)=tmp(1);
+                        %                             srcR(srci,coli)=tmp(2);
+                        %                         end
                         
-                            switch cfg.method
-                                case '\' % same as pinv for symmetric
-                                    tmp=[lfl(:,:),lfr(:,:)]\M;
-                                case 'pinv'
-                                    tmp=pinv([lfl(:,:),lfr(:,:)])*M;
-                                case '*'
-                                    tmp=[lfl(:,:),lfr(:,:)]'*M;
-                            end
-                            srcL(srci,1:3)=tmp(1:3);
-                            srcR(srci,1:3)=tmp(4:6);
-
+                        switch cfg.method
+                            case '\' % same as pinv for symmetric
+                                tmp=[lfl(:,:),lfr(:,:)]\M;
+                            case 'pinv'
+                                tmp=pinv([lfl(:,:),lfr(:,:)])*M;
+                            case '*'
+                                tmp=[lfl(:,:),lfr(:,:)]'*M;
+                        end
+                        srcL(srci,1:3)=tmp(1:3);
+                        srcR(srci,1:3)=tmp(4:6);
+                        
                         L=srcL(srci,:);
                         R=srcR(srci,:);
                         LL=L-abs(R)./sum(abs([R;L])).*(L-R);
@@ -150,6 +164,8 @@ switch cfg.method
                             case '*'
                                 tmp=[lfL,lfR]'*M;
                         end
+                        mom(lefti,1:3)=tmp(1).*LL';
+                        mom(righti,1:3)=tmp(2).*RR';
                         Vmodel=lfL*tmp(1)+lfR*tmp(2);
                         goodness(lefti)=corr(M,Vmodel).^2;
                         goodness(righti)=goodness(lefti);
@@ -175,14 +191,14 @@ switch cfg.method
             RR(2)=-LL(2);
             lfL=lfl*LL';
             lfR=lfr*RR';
-%             switch cfg.method
-%                 case '\' % same as pinv for symmetric
-%                     momLR=[lfL,lfR]\M;
-%                 case 'pinv'
-%                     momLR=pinv([lfL,lfR])*M;
-%                 case '*'
-%                     momLR=[lfL,lfR]'*M;
-%             end
+            %             switch cfg.method
+            %                 case '\' % same as pinv for symmetric
+            %                     momLR=[lfL,lfR]\M;
+            %                 case 'pinv'
+            %                     momLR=pinv([lfL,lfR])*M;
+            %                 case '*'
+            %                     momLR=[lfL,lfR]'*M;
+            %             end
             momLR=pinv([lfL,lfR])*M;
             Vmodel=lfL*momLR(1)+lfR*momLR(2);
             %Vmodel=sum(repmat(momLR(1).*LL,size(lfl,1),1).*lfl,2)+sum(repmat(momLR(2).*RR,size(lfr,1),1).*lfr,2);
@@ -200,6 +216,7 @@ switch cfg.method
             dip.grid_index=[left(maxi),right(maxi)];
             dip.dip.pot=dip.Vmodel;
             dip.dip.rv=sum((dip.Vdata-dip.Vmodel).^2) ./ sum(dip.Vdata.^2); %relative residual variance
+            dip.cfg=cfg;
             R=goodness;
         end
 end
