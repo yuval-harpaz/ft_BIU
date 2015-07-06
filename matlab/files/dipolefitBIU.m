@@ -10,7 +10,7 @@ function [dip,R,mom]=dipolefitBIU(cfg,data)
 % dip is ft_structure for dipole
 % R is the map of R distribution, sort of source localization image
 % mom is the direction of each dipole in R (symmetric)
-R=[];mom=[];
+R=[];
 data.grad=ft_convert_units(data.grad,'mm');
 if ~isfield(cfg,'method')
     cfg.method='fieldtrip';
@@ -26,8 +26,16 @@ if ~isfield(cfg,'vol')
     hs=hs.pnt*1000;
     [cfg.vol.o,cfg.vol.r]=fitsphere(hs);
     cfg.vol.type='singlesphere';
-elseif ~strcmp(cfg.vol.type,'singlesphere')
-    error ('only singlesphere type is possible for now')
+else
+    if isfield(cfg.vol,'type')
+        if ~strcmp(cfg.vol.type,'singlesphere')
+            error ('only singlesphere type is possible for now')
+        end
+    else
+        if sum(size(cfg.vol.o)==[1,3])==2 && length(cfg.vol.r)==1
+            cfg.vol.type='singlesphere';
+        end
+    end
 end
 cfg.vol=ft_convert_units(cfg.vol,'mm');
 if ~isfield(cfg,'grid')
@@ -42,6 +50,7 @@ if ~isfield(cfg,'grid')
     cfg1.grid.ygrid=cfg1.grid.ygrid+cfg.vol.o(2); % for symmetry
     cfg.grid=ft_prepare_leadfield(cfg1,data);
 end
+mom=zeros(length(cfg.grid.inside),3);
 cfg.method=lower(cfg.method);
 switch cfg.method
     case 'fieldtrip'
@@ -52,6 +61,7 @@ switch cfg.method
         end
         dip=ft_dipolefitting(cfg,data);
     otherwise
+        
         t=nearest(data.time,cfg.latency(1)):nearest(data.time,cfg.latency(2));
         M=data.avg(:,t);
         if size(M,2)>1
@@ -61,20 +71,23 @@ switch cfg.method
             [~,chi]=ismember(cfg.grid.label,data.label);
             M=M(chi);
         end
-        source=zeros(length(cfg.grid.inside),3);
+        
         goodness=zeros(length(cfg.grid.inside),1);
         if ~isfield(cfg,'symmetry')
+            cfg.symmetry='no';
+        end
+        if strcmp(cfg.symmetry,'no')
             warning off; % because of '\' warnings
             for srci=[find(cfg.grid.inside)]';
                 switch cfg.method
                     case '\'
-                        source(srci,1:3)=cfg.grid.leadfield{srci}\M;
+                        mom(srci,1:3)=cfg.grid.leadfield{srci}\M;
                     case 'pinv' % identical to fieldtrip
-                        source(srci,1:3)=pinv(cfg.grid.leadfield{srci})*M;
+                        mom(srci,1:3)=pinv(cfg.grid.leadfield{srci})*M;
                     case '*'
-                        source(srci,1:3)=cfg.grid.leadfield{srci}'*M;
+                        mom(srci,1:3)=cfg.grid.leadfield{srci}'*M;
                 end
-                goodness(srci)=corr(M,(source(srci,:)*cfg.grid.leadfield{srci}')').^2;
+                goodness(srci)=corr(M,(mom(srci,:)*cfg.grid.leadfield{srci}')').^2;
             end
             [~,maxi]=max(goodness);
             warning on
@@ -82,10 +95,10 @@ switch cfg.method
             dip.label=data.label;
             dip.dip.pos=cfg.grid.pos(maxi,:);
             dip.Vdata=M;
-            dip.Vmodel=cfg.grid.leadfield{maxi}*source(maxi,:)';
+            dip.Vmodel=cfg.grid.leadfield{maxi}*mom(maxi,:)';
             dip.time=cfg.latency;
             dip.dimord=data.dimord;
-            dip.dip.mom=source(maxi,:)';
+            dip.dip.mom=mom(maxi,:)';
             dip.leadfield{1,1}=cfg.grid.leadfield{maxi};
             dip.grid_index=maxi;
             dip.dip.rv=sum((dip.Vdata-dip.Vmodel).^2) ./ sum(dip.Vdata.^2);
@@ -94,24 +107,27 @@ switch cfg.method
             dip.cfg=cfg;
         else
             % find left-right grid pairs
-            left=find(cfg.grid.pos(:,2)>cfg.vol.o(2));
+            
+            [left,right,inside]=findLRpairs(cfg.grid,cfg.vol);
+%             left=find(cfg.grid.pos(:,2)>cfg.vol.o(2));
+%             
+%             right=[];
+%             for lefti=1:length(left)
+%                 logi1=cfg.grid.pos(:,1)==cfg.grid.pos(left(lefti),1);
+%                 logi2=abs(cfg.grid.pos(:,2)-(2*cfg.vol.o(2)-cfg.grid.pos(left(lefti),2)))<1e-10;
+%                 logi3=cfg.grid.pos(:,3)==cfg.grid.pos(left(lefti),3);
+%                 try
+%                     right(lefti)=find((logi1+logi2+logi3)==3);
+%                 catch
+%                     error(['cannot find a right pair for grid index ',num2str(left(lefti))]);
+%                 end
+%             end
+%             inside=false(size(cfg.grid.inside));
+%             inside(left)=true;
+%             inside(right)=true;
+%             inside(~cfg.grid.inside)=false;
             srcL=zeros(length(left),3);
             srcR=srcL;
-            right=[];
-            for lefti=1:length(left)
-                logi1=cfg.grid.pos(:,1)==cfg.grid.pos(left(lefti),1);
-                logi2=abs(cfg.grid.pos(:,2)-(2*cfg.vol.o(2)-cfg.grid.pos(left(lefti),2)))<1e-10;
-                logi3=cfg.grid.pos(:,3)==cfg.grid.pos(left(lefti),3);
-                try
-                    right(lefti)=find((logi1+logi2+logi3)==3);
-                catch
-                    error(['cannot find a right pair for grid index ',num2str(left(lefti))]);
-                end
-            end
-            inside=false(size(cfg.grid.inside));
-            inside(left)=true;
-            inside(right)=true;
-            inside(~cfg.grid.inside)=false;
             mom=zeros(size(cfg.grid.pos));
             warning off
             for srci=1:length(left);
@@ -176,13 +192,12 @@ switch cfg.method
             warning on
             src=srcL+srcR;
             src(:,2)=srcL(:,2)-srcR(:,2);
-            source(left,1:3)=srcL;
-            source(right,1:3)=srcR;
-            dist=sqrt(sum((cfg.grid.pos-repmat(cfg.vol.o,size(source,1),1)).^2,2));
+            mom(left,1:3)=srcL;
+            mom(right,1:3)=srcR;
+            dist=sqrt(sum((cfg.grid.pos-repmat(cfg.vol.o,size(mom,1),1)).^2,2));
             [~,maxi]=max(goodness(left));
             lfl=cfg.grid.leadfield{left(maxi)};
             lfr=cfg.grid.leadfield{right(maxi)};
-            
             L=srcL(maxi,:);
             R=srcR(maxi,:);
             LL=L-abs(R)./sum(abs([R;L])).*(L-R);
