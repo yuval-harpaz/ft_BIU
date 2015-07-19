@@ -1,12 +1,19 @@
 function [dip,R,mom]=dipolefitBIU(cfg,data)
 % dipole fit for fieldtrip structure data
 % by default, makes single sphere vol from headshape
-% please give cfg.latency (sec) or else!
+% please give cfg.latency (sec, [0.03 0.04]) or else!
+%
+% cfg options
+% limit dipole orientation to anatomy by providing cfg.vol cfg.grid and
+% cfg.ori
 % use cfg.symmetry    = 'y' for left-right symmetric dipole.
+% use cfg.symmetry    = 'anatomy' with cfg.pairs (true if the grid is LR pairs (LH first then RH grid point, check fsLRpairs_fsaverage_sym.m and fsLRpairs.m)
+% for symmetric dipoles based on anatomy
 % note that coordinates here are in PRI order to fit the headshape
 % if you use cfg.method = 'fieldtrip' you can use cfg options from
 % ft_dipolefitting
 %
+% output
 % dip is ft_structure for dipole
 % R is the map of R distribution, sort of source localization image
 % mom is the direction of each dipole in R (symmetric)
@@ -19,6 +26,15 @@ end
 data.grad=ft_convert_units(data.grad,'mm');
 if ~isfield(cfg,'method')
     cfg.method='fieldtrip';
+end
+if isfield(cfg,'pairs')
+    if islogical(cfg.pairs)
+        anatSym=cfg.pairs;
+    else
+        error('cfg.pairs is true for pairs of anatomical grid points')
+    end
+else
+    anatSym=false;
 end
 if ~isfield(cfg,'vol')
     if exist('./hs_file','file')
@@ -57,18 +73,20 @@ if ~isfield(cfg,'grid')
 end
 mom=zeros(length(cfg.grid.inside),3);
 
-if fixedOri % find dipole based on anatomically difined location and orientation points
+if fixedOri && ~strcmp(cfg.symmetry,'anatomy') % find dipole based on anatomically difined location and orientation points
     t=nearest(data.time,cfg.latency(1)):nearest(data.time,cfg.latency(2));
     M=data.avg(:,t);
     if size(M,2)>1
         M=mean(M,2);
     end
+    
     for srci=1:length(cfg.ori);
         gain=cfg.grid.leadfield{srci}*cfg.ori(srci,:)';
         R(srci,1)=corr(gain,M).^2;
         mom(srci,1:3)=gain'*M*cfg.ori(srci,:);
     end
     [~,maxi]=max(R);
+    
     dip=[];
     dip.label=data.label;
     dip.dip.pos=cfg.grid.pos(maxi,:);
@@ -139,8 +157,14 @@ else
                 dip.cfg=cfg;
             else
                 % find left-right grid pairs
-                
-                [left,right,inside]=findLRpairs(cfg.grid,cfg.vol);
+                if anatSym
+                    hemSize=length(cfg.ori)/2;
+                    left=1:hemSize;%cfg.pairs(1:hemSize);
+                    right=left+hemSize;%cfg.pairs(hemSize+1:end);
+                else
+                    [left,right]=findLRpairs(cfg.grid,cfg.vol);
+                    anatSym=false;
+                end
                 %             left=find(cfg.grid.pos(:,2)>cfg.vol.o(2));
                 %
                 %             right=[];
@@ -166,44 +190,51 @@ else
                     if ~right(srci)==0
                         lefti=left(srci);
                         righti=right(srci);
-                        lfl=cfg.grid.leadfield{lefti};
-                        lfr=cfg.grid.leadfield{righti};
-                        if ~isempty(lfl) && ~isempty(lfr)
-                            %                         for coli=1:3
-                            %                             switch cfg.method
-                            %                                 case '\' % same as pinv for symmetric
-                            %                                     tmp=[lfl(:,coli),lfr(:,coli)]\M;
-                            %                                 case 'pinv'
-                            %                                     tmp=pinv([lfl(:,coli),lfr(:,coli)])*M;
-                            %                                 case '*'
-                            %                                     tmp=[lfl(:,coli),lfr(:,coli)]'*M;
-                            %                             end
-                            %                             srcL(srci,coli)=tmp(1);
-                            %                             srcR(srci,coli)=tmp(2);
-                            %                         end
-                            
-                            switch cfg.method
-                                case '\' % same as pinv for symmetric
-                                    tmp=[lfl(:,:),lfr(:,:)]\M;
-                                case 'pinv'
-                                    tmp=pinv([lfl(:,:),lfr(:,:)])*M;
-                                case '*'
-                                    tmp=[lfl(:,:),lfr(:,:)]'*M;
+                        if ~isempty(cfg.grid.leadfield{lefti}) && ~isempty(cfg.grid.leadfield{righti})
+                            if anatSym
+                                lfL=cfg.grid.leadfield{lefti}*cfg.ori(lefti,:)';
+                                lfR=cfg.grid.leadfield{righti}*cfg.ori(righti,:)';
+                            else
+                                lfl=cfg.grid.leadfield{lefti};
+                                lfr=cfg.grid.leadfield{righti};
+                                
+                                
+                                %                         for coli=1:3
+                                %                             switch cfg.method
+                                %                                 case '\' % same as pinv for symmetric
+                                %                                     tmp=[lfl(:,coli),lfr(:,coli)]\M;
+                                %                                 case 'pinv'
+                                %                                     tmp=pinv([lfl(:,coli),lfr(:,coli)])*M;
+                                %                                 case '*'
+                                %                                     tmp=[lfl(:,coli),lfr(:,coli)]'*M;
+                                %                             end
+                                %                             srcL(srci,coli)=tmp(1);
+                                %                             srcR(srci,coli)=tmp(2);
+                                %                         end
+                                
+                                switch cfg.method
+                                    case '\' % same as pinv for symmetric
+                                        tmp=[lfl(:,:),lfr(:,:)]\M;
+                                    case 'pinv'
+                                        tmp=pinv([lfl(:,:),lfr(:,:)])*M;
+                                    case '*'
+                                        tmp=[lfl(:,:),lfr(:,:)]'*M;
+                                end
+                                srcL(srci,1:3)=tmp(1:3);
+                                srcR(srci,1:3)=tmp(4:6);
+                                
+                                L=srcL(srci,:);
+                                R=srcR(srci,:);
+                                LL=L-abs(R)./sum(abs([R;L])).*(L-R);
+                                RR=LL;
+                                LL(2)=L(2)-abs(R(2))./sum(abs([R(2);L(2)])).*(L(2)+R(2));
+                                RR(2)=-LL(2);
+                                scale=mean(abs(LL));
+                                LL=LL./scale;
+                                RR=RR./scale;
+                                lfL=lfl*LL';
+                                lfR=lfr*RR';
                             end
-                            srcL(srci,1:3)=tmp(1:3);
-                            srcR(srci,1:3)=tmp(4:6);
-                            
-                            L=srcL(srci,:);
-                            R=srcR(srci,:);
-                            LL=L-abs(R)./sum(abs([R;L])).*(L-R);
-                            RR=LL;
-                            LL(2)=L(2)-abs(R(2))./sum(abs([R(2);L(2)])).*(L(2)+R(2));
-                            RR(2)=-LL(2);
-                            scale=mean(abs(LL));
-                            LL=LL./scale;
-                            RR=RR./scale;
-                            lfL=lfl*LL';
-                            lfR=lfr*RR';
                             switch cfg.method
                                 case '\' % same as pinv for symmetric
                                     tmp=[lfL,lfR]\M;
@@ -212,15 +243,17 @@ else
                                 case '*'
                                     tmp=[lfL,lfR]'*M;
                             end
-                            mom(lefti,1:3)=tmp(1).*LL';
-                            mom(righti,1:3)=tmp(2).*RR';
+                            %mom(lefti,1:3)=tmp(1).*LL';
+                            %mom(righti,1:3)=tmp(2).*RR';
                             Vmodel=lfL*tmp(1)+lfR*tmp(2);
                             goodness(lefti)=corr(M,Vmodel).^2;
                             goodness(righti)=goodness(lefti);
                             
                         end
                     end
+                    prog(srci)
                 end
+                disp(' ')
                 warning on
                 src=srcL+srcR;
                 src(:,2)=srcL(:,2)-srcR(:,2);
@@ -228,16 +261,26 @@ else
                 mom(right,1:3)=srcR;
                 dist=sqrt(sum((cfg.grid.pos-repmat(cfg.vol.o,size(mom,1),1)).^2,2));
                 [~,maxi]=max(goodness(left));
-                lfl=cfg.grid.leadfield{left(maxi)};
-                lfr=cfg.grid.leadfield{right(maxi)};
-                L=srcL(maxi,:);
-                R=srcR(maxi,:);
-                LL=L-abs(R)./sum(abs([R;L])).*(L-R);
-                RR=LL;
-                LL(2)=L(2)-abs(R(2))./sum(abs([R(2);L(2)])).*(L(2)+R(2));
-                RR(2)=-LL(2);
-                lfL=lfl*LL';
-                lfR=lfr*RR';
+                if anatSym
+                    lfL=cfg.grid.leadfield{maxi}*cfg.ori(maxi,:)';
+                    lfR=cfg.grid.leadfield{maxi+hemSize}*cfg.ori(maxi+hemSize,:)';
+                    momLR=pinv([lfL,lfR])*M;
+                    Vmodel=lfL*momLR(1)+lfR*momLR(2);
+                    lfl=cfg.grid.leadfield{maxi};
+                    lfr=cfg.grid.leadfield{maxi+hemSize};
+                else
+                    
+                    lfl=cfg.grid.leadfield{left(maxi)};
+                    lfr=cfg.grid.leadfield{right(maxi)};
+                    L=srcL(maxi,:);
+                    R=srcR(maxi,:);
+                    LL=L-abs(R)./sum(abs([R;L])).*(L-R);
+                    RR=LL;
+                    LL(2)=L(2)-abs(R(2))./sum(abs([R(2);L(2)])).*(L(2)+R(2));
+                    RR(2)=-LL(2);
+                    lfL=lfl*LL';
+                    lfR=lfr*RR';
+                
                 %             switch cfg.method
                 %                 case '\' % same as pinv for symmetric
                 %                     momLR=[lfL,lfR]\M;
@@ -246,8 +289,10 @@ else
                 %                 case '*'
                 %                     momLR=[lfL,lfR]'*M;
                 %             end
-                momLR=pinv([lfL,lfR])*M;
-                Vmodel=lfL*momLR(1)+lfR*momLR(2);
+                    momLR=pinv([lfL,lfR])*M;
+                    Vmodel=lfL*momLR(1)+lfR*momLR(2);
+                    momLR=[momLR(1).*LL';momLR(2).*RR'];
+                end
                 %Vmodel=sum(repmat(momLR(1).*LL,size(lfl,1),1).*lfl,2)+sum(repmat(momLR(2).*RR,size(lfr,1),1).*lfr,2);
                 %Vmodel=[lfl,lfr]*dip.dip.mom
                 dip=[];
@@ -257,7 +302,7 @@ else
                 dip.Vmodel=Vmodel;  %  (srcL(maxi,:)*lfl'+srcR(maxi,:)*lfr')';%cfg.grid.leadfield{maxi}*source(maxi,:)'
                 dip.time=cfg.latency;
                 dip.dimord=data.dimord;
-                dip.dip.mom=[momLR(1).*LL';momLR(2).*RR'];
+                dip.dip.mom=momLR;
                 dip.leadfield{1,1}=lfl;
                 dip.leadfield{1,2}=lfr;
                 dip.grid_index=[left(maxi),right(maxi)];
