@@ -1,7 +1,14 @@
 function trialPlot(data)
 % view trials and mark good or bad. in the end it writes a badtrials.mat
 % file with 0 for good and 1 for bad trial numbers.
-data=rmfield(data,'sampleinfo');
+if isfield(data,'sampleinfo')
+    data=rmfield(data,'sampleinfo');
+end
+avg.label=data.label;
+avg.avg=zeros(min([248,length(data.label)]),1);
+avg.time=0;
+avg.dimord='chan_time';
+
 global pos posPrev quitFunc
 quitFun=false;
 pos=data.time{1}(1);
@@ -13,10 +20,12 @@ title('FIELDTRIP TOPOPLOT')
 cfg=[];
 cfg.layout='4D248.lay';
 cfg.xlim = [pos(1) pos(1)]; %time window in ms
-cfg.trials=1;
+%cfg.trials=1;
 cfg.channel=data.label;
 figure(figure2);
-ft_topoplotER(cfg, data);
+avg.time=data.time{1}(1);
+avg.avg=data.trial{1}(:,1);
+ft_topoplotER(cfg, avg);
 display('plot of trial 1');
 display('click on the traces to get a topoplot for selected time points')
 if ~isfield(data,'trial')
@@ -191,12 +200,16 @@ newfig(info.trlop)
             end
             if posPrev~=pos;
                 info.trlop
+                samp=nearest(data.time{info.trlop},pos(1));
                 cfg=[];
                 cfg.layout='4D248.lay';
                 cfg.xlim = [pos(1) pos(1)]; %time window in ms
-                cfg.trials=info.trlop;
+%                 cfg.trials=info.trlop;
                 figure(figure2);
-                ft_topoplotER(cfg, data);
+%                 ft_topoplotER(cfg, data);
+                avg.time=pos(1);
+                avg.avg=data.trial{info.trlop}(:,samp);
+                ft_topoplotER(cfg, avg);
                 display(['plot of trial ',num2str(info.trlop)]);
                 posPrev=pos;
                 output_txt = {['X: ',num2str(pos(1),4)],...

@@ -17,6 +17,7 @@ function [dip,R,mom]=dipolefitBIU(cfg,data)
 % dip is ft_structure for dipole
 % R is the map of R distribution, sort of source localization image
 % mom is the direction of each dipole in R (symmetric)
+
 R=[];
 if isfield(cfg,'grid') && isfield(cfg,'vol') && isfield(cfg,'ori')
     fixedOri=true;
@@ -69,6 +70,7 @@ if ~isfield(cfg,'grid')
     %cfg1.grid.inside     = true(length(pnt),1);
     cfg1.vol=cfg.vol;
     cfg1.grid.ygrid=cfg1.grid.ygrid+cfg.vol.o(2); % for symmetry
+    cfg1.channel='MEG';
     cfg.grid=ft_prepare_leadfield(cfg1,data);
 end
 mom=zeros(length(cfg.grid.inside),3);
@@ -111,9 +113,15 @@ else
             end
             dip=ft_dipolefitting(cfg,data);
         otherwise
-            
+            if isfield(cfg,'channel')
+                channel=ft_channelselection(cfg.channel,data.label);
+            else
+                channel=ft_channelselection('MEG',data.label);
+            end
+            [~,chi]=ismember(channel,data.label);
+            chi=chi(find(chi));
             t=nearest(data.time,cfg.latency(1)):nearest(data.time,cfg.latency(2));
-            M=data.avg(:,t);
+            M=data.avg(chi,t);
             if size(M,2)>1
                 M=mean(M,2);
             end
@@ -122,7 +130,7 @@ else
                 M=M(chi);
             end
             
-            goodness=zeros(length(cfg.grid.inside),1);
+            R=zeros(length(cfg.grid.inside),1);
             if ~isfield(cfg,'symmetry')
                 cfg.symmetry='no';
             end
@@ -137,9 +145,9 @@ else
                         case '*'
                             mom(srci,1:3)=cfg.grid.leadfield{srci}'*M;
                     end
-                    goodness(srci)=corr(M,(mom(srci,:)*cfg.grid.leadfield{srci}')').^2;
+                    R(srci)=corr(M,(mom(srci,:)*cfg.grid.leadfield{srci}')').^2;
                 end
-                [~,maxi]=max(goodness);
+                [~,maxi]=max(R);
                 warning on
                 dip=[];
                 dip.label=data.label;
@@ -153,7 +161,7 @@ else
                 dip.grid_index=maxi;
                 dip.dip.rv=sum((dip.Vdata-dip.Vmodel).^2) ./ sum(dip.Vdata.^2);
                 dip.dip.pot=dip.Vmodel;
-                R=goodness;
+                %R=R;
                 dip.cfg=cfg;
             else
                 % find left-right grid pairs
@@ -192,8 +200,10 @@ else
                         righti=right(srci);
                         if ~isempty(cfg.grid.leadfield{lefti}) && ~isempty(cfg.grid.leadfield{righti})
                             if anatSym
-                                lfL=cfg.grid.leadfield{lefti}*cfg.ori(lefti,:)';
-                                lfR=cfg.grid.leadfield{righti}*cfg.ori(righti,:)';
+                                LL=cfg.ori(lefti,:);
+                                RR=cfg.ori(righti,:);
+                                lfL=cfg.grid.leadfield{lefti}*LL';
+                                lfR=cfg.grid.leadfield{righti}*RR';
                             else
                                 lfl=cfg.grid.leadfield{lefti};
                                 lfr=cfg.grid.leadfield{righti};
@@ -220,18 +230,19 @@ else
                                     case '*'
                                         tmp=[lfl(:,:),lfr(:,:)]'*M;
                                 end
-                                srcL(srci,1:3)=tmp(1:3);
-                                srcR(srci,1:3)=tmp(4:6);
+                                srcl(srci,1:3)=tmp(1:3);
+                                srcr(srci,1:3)=tmp(4:6);
                                 
-                                L=srcL(srci,:);
-                                R=srcR(srci,:);
-                                LL=L-abs(R)./sum(abs([R;L])).*(L-R);
+                                Left=srcl(srci,:);
+                                Right=srcr(srci,:);
+                                LL=Left-abs(Right)./sum(abs([Right;Left])).*(Left-Right); % LL is the computed orientation of the left dipole
                                 RR=LL;
-                                LL(2)=L(2)-abs(R(2))./sum(abs([R(2);L(2)])).*(L(2)+R(2));
+                                LL(2)=Left(2)-abs(Right(2))./sum(abs([Right(2);Left(2)])).*(Left(2)+Right(2));
                                 RR(2)=-LL(2);
-                                scale=mean(abs(LL));
-                                LL=LL./scale;
-                                RR=RR./scale;
+                                
+                                %scale=mean(abs(LL));
+                                LL=LL./sqrt(sum((LL).^2));
+                                RR=RR./sqrt(sum((RR).^2));
                                 lfL=lfl*LL';
                                 lfR=lfr*RR';
                             end
@@ -243,11 +254,13 @@ else
                                 case '*'
                                     tmp=[lfL,lfR]'*M;
                             end
-                            %mom(lefti,1:3)=tmp(1).*LL';
-                            %mom(righti,1:3)=tmp(2).*RR';
+                            mom(lefti,1:3)=tmp(1).*LL';
+                            mom(righti,1:3)=tmp(2).*RR';
                             Vmodel=lfL*tmp(1)+lfR*tmp(2);
-                            goodness(lefti)=corr(M,Vmodel).^2;
-                            goodness(righti)=goodness(lefti);
+                            % the same as:
+                            % Vmodel=lfl*mom(lefti,:)'+lfr*mom(righti,:)';
+                            R(lefti)=corr(M,Vmodel).^2;
+                            R(righti)=R(lefti);
                             
                         end
                     end
@@ -255,12 +268,12 @@ else
                 end
                 disp(' ')
                 warning on
-                src=srcL+srcR;
-                src(:,2)=srcL(:,2)-srcR(:,2);
-                mom(left,1:3)=srcL;
-                mom(right,1:3)=srcR;
+%                 src=srcL+srcR;
+%                 src(:,2)=srcL(:,2)-srcR(:,2);
+                %mom(left,1:3)=srcL;
+                %mom(right,1:3)=srcR;
                 dist=sqrt(sum((cfg.grid.pos-repmat(cfg.vol.o,size(mom,1),1)).^2,2));
-                [~,maxi]=max(goodness(left));
+                [~,maxi]=max(R(left));
                 if anatSym
                     lfL=cfg.grid.leadfield{maxi}*cfg.ori(maxi,:)';
                     lfR=cfg.grid.leadfield{maxi+hemSize}*cfg.ori(maxi+hemSize,:)';
@@ -272,14 +285,14 @@ else
                     
                     lfl=cfg.grid.leadfield{left(maxi)};
                     lfr=cfg.grid.leadfield{right(maxi)};
-                    L=srcL(maxi,:);
-                    R=srcR(maxi,:);
-                    LL=L-abs(R)./sum(abs([R;L])).*(L-R);
-                    RR=LL;
-                    LL(2)=L(2)-abs(R(2))./sum(abs([R(2);L(2)])).*(L(2)+R(2));
-                    RR(2)=-LL(2);
-                    lfL=lfl*LL';
-                    lfR=lfr*RR';
+%                     L=srcL(maxi,:);
+%                     R=srcR(maxi,:);
+%                     LL=L-abs(R)./sum(abs([R;L])).*(L-R);
+%                     RR=LL;
+%                     LL(2)=L(2)-abs(R(2))./sum(abs([R(2);L(2)])).*(L(2)+R(2));
+%                     RR(2)=-LL(2);
+%                     lfL=lfl*LL';
+%                     lfR=lfr*RR';
                 
                 %             switch cfg.method
                 %                 case '\' % same as pinv for symmetric
@@ -289,9 +302,9 @@ else
                 %                 case '*'
                 %                     momLR=[lfL,lfR]'*M;
                 %             end
-                    momLR=pinv([lfL,lfR])*M;
-                    Vmodel=lfL*momLR(1)+lfR*momLR(2);
-                    momLR=[momLR(1).*LL';momLR(2).*RR'];
+%                     momLR=pinv([lfL,lfR])*M;
+%                     Vmodel=lfL*momLR(1)+lfR*momLR(2);
+%                     momLR=[momLR(1).*LL';momLR(2).*RR'];
                 end
                 %Vmodel=sum(repmat(momLR(1).*LL,size(lfl,1),1).*lfl,2)+sum(repmat(momLR(2).*RR,size(lfr,1),1).*lfr,2);
                 %Vmodel=[lfl,lfr]*dip.dip.mom
@@ -299,17 +312,17 @@ else
                 dip.label=data.label;
                 dip.dip.pos=[cfg.grid.pos(left(maxi),:);cfg.grid.pos(right(maxi),:)];
                 dip.Vdata=M;
-                dip.Vmodel=Vmodel;  %  (srcL(maxi,:)*lfl'+srcR(maxi,:)*lfr')';%cfg.grid.leadfield{maxi}*source(maxi,:)'
                 dip.time=cfg.latency;
                 dip.dimord=data.dimord;
-                dip.dip.mom=momLR;
-                dip.leadfield{1,1}=lfl;
-                dip.leadfield{1,2}=lfr;
+                dip.dip.mom=[mom(left(maxi),:),mom(right(maxi),:)]';%momLR;
+                dip.leadfield{1,1}=cfg.grid.leadfield{left(maxi)};
+                dip.leadfield{1,2}=cfg.grid.leadfield{right(maxi)};
                 dip.grid_index=[left(maxi),right(maxi)];
+                dip.Vmodel=[dip.leadfield{1,1},dip.leadfield{1,2}]*dip.dip.mom;  %  (srcL(maxi,:)*lfl'+srcR(maxi,:)*lfr')';%cfg.grid.leadfield{maxi}*source(maxi,:)'
                 dip.dip.pot=dip.Vmodel;
                 dip.dip.rv=sum((dip.Vdata-dip.Vmodel).^2) ./ sum(dip.Vdata.^2); %relative residual variance
                 dip.cfg=cfg;
-                R=goodness;
+                %R=goodness;
             end
     end
 end
