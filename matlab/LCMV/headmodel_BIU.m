@@ -200,7 +200,12 @@ hold on
 if strcmp(vol.type,'multisphere');
     ft_plot_vol(single);
 else
-    ft_plot_vol(vol);
+    try
+        ft_plot_vol(vol);
+    catch
+        vol.type='multisphere';
+        ft_plot_vol(vol);
+    end
 end
 ft_plot_mesh(grid);
 end
