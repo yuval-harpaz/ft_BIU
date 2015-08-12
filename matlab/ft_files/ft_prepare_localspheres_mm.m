@@ -218,7 +218,7 @@ for chan=1:Nchan
 end % for all channels
 
 vol.type = 'localspheres';
-
+vol.unit='mm';
 % ensure that the geometrical units are specified
 vol = ft_convert_units(vol);
 
