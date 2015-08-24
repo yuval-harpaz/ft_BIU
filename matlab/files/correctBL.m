@@ -15,7 +15,7 @@ else
         dataType='Gavg';
         time=data.time;
     elseif isfield(data,'trial')
-        dataType='trial';
+        dataType='trials';
         time=data.time{1};
     end
     
