@@ -98,6 +98,7 @@ newfig(info.trlop)
         else
             disp('no bad trials were marked')
         end
+        pause off
         close all
         quitFunc=true;
         %evalin('caller','return')
@@ -132,6 +133,7 @@ newfig(info.trlop)
                 disp('no bad trials were marked')
             end
             save badtrials badtrials
+            pause off
             close all
             return;
         end
@@ -160,8 +162,9 @@ newfig(info.trlop)
             else
                 disp('no bad trials were marked')
             end
-            
+            pause off
             close all
+            
             return;
             
         end
@@ -196,6 +199,8 @@ newfig(info.trlop)
         for loopi=1:600
             pause(0.1)
             if quitFunc
+                disp('quitting')
+                pause off
                 return
             end
             if posPrev~=pos;
