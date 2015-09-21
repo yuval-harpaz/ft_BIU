@@ -1,6 +1,11 @@
 function trialPlot(data)
 % view trials and mark good or bad. in the end it writes a badtrials.mat
 % file with 0 for good and 1 for bad trial numbers.
+
+if length(data.trial)>249
+    set(0,'RecursionLimit',length(data.trial)*2);
+end
+
 if isfield(data,'sampleinfo')
     data=rmfield(data,'sampleinfo');
 end
