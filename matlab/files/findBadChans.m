@@ -1,5 +1,8 @@
-function findBadChans(source);
-cfg.dataset=source;
+function findBadChans(src)
+if ~exist('src','var')
+    src=source;
+end
+cfg.dataset=src;
 cfg.trialdef.poststim=10;
 cfg.trialfun='trialfun_beg';
 cfg1=ft_definetrial(cfg);
