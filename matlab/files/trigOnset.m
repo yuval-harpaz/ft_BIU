@@ -1,6 +1,8 @@
 function [events,values]=trigOnset(trig)
 if ~exist('trig','var')
     trig=readTrig_BIU(source);
+elseif ischar(trig)
+    trig=readTrig_BIU(trig);
 end
 trig=clearTrig(trig,[256,512,1024,2048]);
 close;

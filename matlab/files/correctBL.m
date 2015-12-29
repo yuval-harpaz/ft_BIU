@@ -4,8 +4,15 @@ function data=correctBL(data,blcwindow)
 % averaged data, data with trials or timelockgrandaverage output.
 % now it also works for 2D data matrices. For them, give blcwindow in samples.
 if isnumeric(data)
+    if ~exist('blcwindow','var')
+        firstSamp=1;
+        lastSamp=size(data,2);
+    else
+        firstSamp=blcwindow(1);
+        lastSamp=blcwindow(2);
+    end
     for chani=1:size(data,1)
-        data(chani,1:end)=data(chani,1:end)-mean(data(chani,blcwindow(1):blcwindow(2)));
+        data(chani,1:end)=data(chani,1:end)-mean(data(chani,firstSamp:lastSamp));
     end
 else
     if isfield(data,'avg')
