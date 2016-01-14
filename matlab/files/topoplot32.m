@@ -6,5 +6,6 @@ if ~exist ('cfg','var')
 end
 cfg.layout='WG32.lay';
 load ~/ft_BIU/matlab/ploteeg
+eeg=rmfield(eeg,'cfg')
 eeg.avg(:,1)=vec;
 fig1=ft_topoplotER(cfg,eeg);
