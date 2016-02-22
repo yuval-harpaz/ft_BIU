@@ -18,7 +18,7 @@ end
 [nchans, nsamples] = size(dat);
 if nsamples==1 && nchans>1
     dat=dat';
-    [nchans, nsamples] = size(dat);
+    [~, nsamples] = size(dat);
 end
 % set the default filter frequency
 if nargin<3 || isempty(Fl)
@@ -37,6 +37,7 @@ if n == 0
     error('better include a whole cycle (100ms for 10Hz estimate) or more')
 end
 time = (0:win-1)/Fs;
+filt=dat;
 for segmenti=1:floor(n/win)
     sel=(segmenti*win-win+1):segmenti*win;
     % temporarily remove mean to avoid leakage
@@ -51,6 +52,6 @@ for segmenti=1:floor(n/win)
     est(:,sel)  = ampl*tmp;                               % estimated signal at this frequency
     filt(:,sel) = dat(:,sel) - est(:,sel);                              % subtract estimated signal
     filt(:,sel) = real(filt(:,sel));
-    filt(:,sel) = filt(:,sel)+repmat(meandat,1,win);
+    filt(:,sel) = filt(:,sel)-repmat(mean(filt(:,sel),2),1,win)+repmat(meandat,1,win);
 end
 
