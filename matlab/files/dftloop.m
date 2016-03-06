@@ -1,4 +1,4 @@
-function [filt,est] = dftloop(dat, Fs, Fl,win)
+function [filt,est,tfr] = dftloop(dat, Fs, Fl,win)
 % see dft
 % where
 %   dat        data matrix (Nchans X Ntime)
@@ -38,6 +38,7 @@ if n == 0
 end
 time = (0:win-1)/Fs;
 filt=dat;
+tfr=zeros(size(dat));
 for segmenti=1:floor(n/win)
     sel=(segmenti*win-win+1):segmenti*win;
     % temporarily remove mean to avoid leakage
@@ -53,5 +54,7 @@ for segmenti=1:floor(n/win)
     filt(:,sel) = dat(:,sel) - est(:,sel);                              % subtract estimated signal
     filt(:,sel) = real(filt(:,sel));
     filt(:,sel) = filt(:,sel)-repmat(mean(filt(:,sel),2),1,win)+repmat(meandat,1,win);
+    tfr(:,sel)=repmat(abs(ampl),1,length(sel));
 end
+%disp('done')
 
