@@ -16,4 +16,8 @@ if sortedChans
 end
 
 wts.avg(:,1)=vec;
+
+if isfield(cfg,'maskparameter')
+    eval(['wts.',cfg.maskparameter,'=(~isnan(wts.avg));']);
+end
 fig1=ft_topoplotER(cfg,wts);
